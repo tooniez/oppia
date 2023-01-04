@@ -62,15 +62,15 @@ class ClassroomPageAccessValidationHandlerTests(test_utils.GenericTestBase):
     def test_validation_returns_true_if_classroom_is_available(self) -> None:
         self.login(self.EDITOR_EMAIL)
         self.get_html_response(
-            '%s/can_access_classroom_page?classroom_url_fragment=%s' %
-            (ACCESS_VALIDATION_HANDLER_PREFIX, 'math'))
+            f'{ACCESS_VALIDATION_HANDLER_PREFIX}/can_access_classroom_page?classroom_url_fragment=math'
+        )
 
     def test_validation_returns_false_if_classroom_doesnot_exists(self) -> None:
         self.login(self.EDITOR_EMAIL)
         self.get_json(
-            '%s/can_access_classroom_page?classroom_url_fragment=%s' %
-            (ACCESS_VALIDATION_HANDLER_PREFIX, 'not_valid'),
-            expected_status_int=404)
+            f'{ACCESS_VALIDATION_HANDLER_PREFIX}/can_access_classroom_page?classroom_url_fragment=not_valid',
+            expected_status_int=404,
+        )
 
 
 class ReleaseCoordinatorAccessValidationHandlerTests(
@@ -90,21 +90,23 @@ class ReleaseCoordinatorAccessValidationHandlerTests(
 
     def test_guest_user_does_not_pass_validation(self) -> None:
         self.get_json(
-            '%s/can_access_release_coordinator_page' %
-            ACCESS_VALIDATION_HANDLER_PREFIX, expected_status_int=401)
+            f'{ACCESS_VALIDATION_HANDLER_PREFIX}/can_access_release_coordinator_page',
+            expected_status_int=401,
+        )
 
     def test_exploration_editor_does_not_pass_validation(self) -> None:
         self.login(self.EDITOR_EMAIL)
         self.get_json(
-            '%s/can_access_release_coordinator_page' %
-            ACCESS_VALIDATION_HANDLER_PREFIX, expected_status_int=401)
+            f'{ACCESS_VALIDATION_HANDLER_PREFIX}/can_access_release_coordinator_page',
+            expected_status_int=401,
+        )
 
     def test_release_coordinator_passes_validation(self) -> None:
         self.login(self.RELEASE_COORDINATOR_EMAIL)
 
         self.get_html_response(
-            '%s/can_access_release_coordinator_page' %
-            ACCESS_VALIDATION_HANDLER_PREFIX)
+            f'{ACCESS_VALIDATION_HANDLER_PREFIX}/can_access_release_coordinator_page'
+        )
 
 
 class ProfileExistsValidationHandlerTests(test_utils.GenericTestBase):
@@ -120,8 +122,8 @@ class ProfileExistsValidationHandlerTests(test_utils.GenericTestBase):
         # Viewer looks at editor's profile page.
         self.login(self.VIEWER_EMAIL)
         self.get_html_response(
-            '%s/does_profile_exist/%s' % (
-                ACCESS_VALIDATION_HANDLER_PREFIX, self.EDITOR_USERNAME))
+            f'{ACCESS_VALIDATION_HANDLER_PREFIX}/does_profile_exist/{self.EDITOR_USERNAME}'
+        )
         self.logout()
 
     def test_profile_validation_returns_true_if_user_views_own_profile(
@@ -130,8 +132,8 @@ class ProfileExistsValidationHandlerTests(test_utils.GenericTestBase):
         # Editor looks at their own profile page.
         self.login(self.EDITOR_EMAIL)
         self.get_html_response(
-            '%s/does_profile_exist/%s' % (
-                ACCESS_VALIDATION_HANDLER_PREFIX, self.EDITOR_USERNAME))
+            f'{ACCESS_VALIDATION_HANDLER_PREFIX}/does_profile_exist/{self.EDITOR_USERNAME}'
+        )
         self.logout()
 
     def test_profile_validation_returns_false_if_profile_doesnot_exist(
@@ -140,9 +142,9 @@ class ProfileExistsValidationHandlerTests(test_utils.GenericTestBase):
         # Editor looks at non-existing profile page.
         self.login(self.EDITOR_EMAIL)
         self.get_json(
-            '%s/does_profile_exist/%s' % (
-                ACCESS_VALIDATION_HANDLER_PREFIX, self.BLOG_ADMIN_USERNAME),
-                expected_status_int=404)
+            f'{ACCESS_VALIDATION_HANDLER_PREFIX}/does_profile_exist/{self.BLOG_ADMIN_USERNAME}',
+            expected_status_int=404,
+        )
         self.logout()
 
 
@@ -162,13 +164,15 @@ class ManageOwnAccountValidationHandlerTests(test_utils.GenericTestBase):
     def test_banned_user_cannot_manage_account(self) -> None:
         self.login(self.banned_user_email)
         self.get_json(
-            '%s/can_manage_own_account' % ACCESS_VALIDATION_HANDLER_PREFIX,
-            expected_status_int=401)
+            f'{ACCESS_VALIDATION_HANDLER_PREFIX}/can_manage_own_account',
+            expected_status_int=401,
+        )
 
     def test_normal_user_can_manage_account(self) -> None:
         self.login(self.user_email)
         self.get_html_response(
-            '%s/can_manage_own_account' % ACCESS_VALIDATION_HANDLER_PREFIX)
+            f'{ACCESS_VALIDATION_HANDLER_PREFIX}/can_manage_own_account'
+        )
         self.logout()
 
 
@@ -202,9 +206,9 @@ class ViewLearnerGroupPageAccessValidationHandlerTests(
         config_services.set_property(
             'admin', 'learner_groups_are_enabled', False)
         self.get_json(
-            '%s/does_learner_group_exist/%s' % (
-                ACCESS_VALIDATION_HANDLER_PREFIX, self.LEARNER_GROUP_ID),
-                expected_status_int=404)
+            f'{ACCESS_VALIDATION_HANDLER_PREFIX}/does_learner_group_exist/{self.LEARNER_GROUP_ID}',
+            expected_status_int=404,
+        )
         self.logout()
 
     def test_validation_returns_false_with_user_not_being_a_learner(
@@ -213,9 +217,9 @@ class ViewLearnerGroupPageAccessValidationHandlerTests(
         config_services.set_property(
             'admin', 'learner_groups_are_enabled', True)
         self.get_json(
-            '%s/does_learner_group_exist/%s' % (
-                ACCESS_VALIDATION_HANDLER_PREFIX, self.LEARNER_GROUP_ID),
-                expected_status_int=404)
+            f'{ACCESS_VALIDATION_HANDLER_PREFIX}/does_learner_group_exist/{self.LEARNER_GROUP_ID}',
+            expected_status_int=404,
+        )
         self.logout()
 
     def test_validation_returns_true_for_valid_learner(self) -> None:
@@ -224,8 +228,8 @@ class ViewLearnerGroupPageAccessValidationHandlerTests(
         config_services.set_property(
             'admin', 'learner_groups_are_enabled', True)
         self.get_html_response(
-            '%s/does_learner_group_exist/%s' % (
-                ACCESS_VALIDATION_HANDLER_PREFIX, self.LEARNER_GROUP_ID))
+            f'{ACCESS_VALIDATION_HANDLER_PREFIX}/does_learner_group_exist/{self.LEARNER_GROUP_ID}'
+        )
 
 
 class BlogHomePageAccessValidationHandlerTests(test_utils.GenericTestBase):
@@ -233,15 +237,17 @@ class BlogHomePageAccessValidationHandlerTests(test_utils.GenericTestBase):
 
     def test_blog_home_page_access_without_logging_in(self) -> None:
         self.get_html_response(
-            '%s/can_access_blog_home_page' %
-            ACCESS_VALIDATION_HANDLER_PREFIX, expected_status_int=200)
+            f'{ACCESS_VALIDATION_HANDLER_PREFIX}/can_access_blog_home_page',
+            expected_status_int=200,
+        )
 
     def test_blog_home_page_access_without_having_rights(self) -> None:
         self.signup(self.VIEWER_EMAIL, self.VIEWER_USERNAME)
         self.login(self.VIEWER_EMAIL)
         self.get_html_response(
-            '%s/can_access_blog_home_page' %
-            ACCESS_VALIDATION_HANDLER_PREFIX, expected_status_int=200)
+            f'{ACCESS_VALIDATION_HANDLER_PREFIX}/can_access_blog_home_page',
+            expected_status_int=200,
+        )
         self.logout()
 
     def test_blog_home_page_access_as_blog_admin(self) -> None:
@@ -250,8 +256,9 @@ class BlogHomePageAccessValidationHandlerTests(test_utils.GenericTestBase):
             self.BLOG_ADMIN_USERNAME, feconf.ROLE_ID_BLOG_ADMIN)
         self.login(self.BLOG_ADMIN_EMAIL)
         self.get_html_response(
-            '%s/can_access_blog_home_page' %
-            ACCESS_VALIDATION_HANDLER_PREFIX, expected_status_int=200)
+            f'{ACCESS_VALIDATION_HANDLER_PREFIX}/can_access_blog_home_page',
+            expected_status_int=200,
+        )
         self.logout()
 
     def test_blog_home_page_access_as_blog_post_editor(self) -> None:
@@ -260,8 +267,9 @@ class BlogHomePageAccessValidationHandlerTests(test_utils.GenericTestBase):
             self.BLOG_EDITOR_USERNAME, feconf.ROLE_ID_BLOG_POST_EDITOR)
         self.login(self.BLOG_EDITOR_EMAIL)
         self.get_html_response(
-            '%s/can_access_blog_home_page' %
-            ACCESS_VALIDATION_HANDLER_PREFIX, expected_status_int=200)
+            f'{ACCESS_VALIDATION_HANDLER_PREFIX}/can_access_blog_home_page',
+            expected_status_int=200,
+        )
         self.logout()
 
 
@@ -285,15 +293,17 @@ class BlogPostPageAccessValidationHandlerTests(test_utils.GenericTestBase):
 
     def test_blog_post_page_access_without_logging_in(self) -> None:
         self.get_html_response(
-            '%s/can_access_blog_post_page?blog_post_url_fragment=sample-url' %
-            ACCESS_VALIDATION_HANDLER_PREFIX, expected_status_int=200)
+            f'{ACCESS_VALIDATION_HANDLER_PREFIX}/can_access_blog_post_page?blog_post_url_fragment=sample-url',
+            expected_status_int=200,
+        )
 
     def test_blog_post_page_access_without_having_rights(self) -> None:
         self.signup(self.VIEWER_EMAIL, self.VIEWER_USERNAME)
         self.login(self.VIEWER_EMAIL)
         self.get_html_response(
-            '%s/can_access_blog_post_page?blog_post_url_fragment=sample-url' %
-            ACCESS_VALIDATION_HANDLER_PREFIX, expected_status_int=200)
+            f'{ACCESS_VALIDATION_HANDLER_PREFIX}/can_access_blog_post_page?blog_post_url_fragment=sample-url',
+            expected_status_int=200,
+        )
         self.logout()
 
     def test_blog_post_page_access_as_blog_admin(self) -> None:
@@ -302,8 +312,9 @@ class BlogPostPageAccessValidationHandlerTests(test_utils.GenericTestBase):
             self.BLOG_ADMIN_USERNAME, feconf.ROLE_ID_BLOG_ADMIN)
         self.login(self.BLOG_ADMIN_EMAIL)
         self.get_html_response(
-            '%s/can_access_blog_post_page?blog_post_url_fragment=sample-url' %
-            ACCESS_VALIDATION_HANDLER_PREFIX, expected_status_int=200)
+            f'{ACCESS_VALIDATION_HANDLER_PREFIX}/can_access_blog_post_page?blog_post_url_fragment=sample-url',
+            expected_status_int=200,
+        )
         self.logout()
 
     def test_blog_post_page_access_as_blog_post_editor(self) -> None:
@@ -312,8 +323,9 @@ class BlogPostPageAccessValidationHandlerTests(test_utils.GenericTestBase):
             self.BLOG_EDITOR_USERNAME, feconf.ROLE_ID_BLOG_POST_EDITOR)
         self.login(self.BLOG_EDITOR_EMAIL)
         self.get_html_response(
-            '%s/can_access_blog_post_page?blog_post_url_fragment=sample-url' %
-            ACCESS_VALIDATION_HANDLER_PREFIX, expected_status_int=200)
+            f'{ACCESS_VALIDATION_HANDLER_PREFIX}/can_access_blog_post_page?blog_post_url_fragment=sample-url',
+            expected_status_int=200,
+        )
         self.logout()
 
     def test_validation_returns_false_if_blog_post_is_not_available(
@@ -325,8 +337,9 @@ class BlogPostPageAccessValidationHandlerTests(test_utils.GenericTestBase):
         self.login(self.BLOG_EDITOR_EMAIL)
 
         self.get_json(
-            '%s/can_access_blog_post_page?blog_post_url_fragment=invalid-url' %
-            ACCESS_VALIDATION_HANDLER_PREFIX, expected_status_int=404)
+            f'{ACCESS_VALIDATION_HANDLER_PREFIX}/can_access_blog_post_page?blog_post_url_fragment=invalid-url',
+            expected_status_int=404,
+        )
         self.logout()
 
 
@@ -342,27 +355,24 @@ class BlogAuthorProfilePageAccessValidationHandlerTests(
 
     def test_blog_author_profile_page_access_without_logging_in(self) -> None:
         self.get_html_response(
-            '%s/can_access_blog_author_profile_page/%s' % (
-            ACCESS_VALIDATION_HANDLER_PREFIX, self.BLOG_ADMIN_USERNAME
-            ), expected_status_int=200
+            f'{ACCESS_VALIDATION_HANDLER_PREFIX}/can_access_blog_author_profile_page/{self.BLOG_ADMIN_USERNAME}',
+            expected_status_int=200,
         )
 
     def test_blog_author_profile_page_access_after_logging_in(self) -> None:
         self.signup(self.VIEWER_EMAIL, self.VIEWER_USERNAME)
         self.login(self.VIEWER_EMAIL)
         self.get_html_response(
-            '%s/can_access_blog_author_profile_page/%s' % (
-            ACCESS_VALIDATION_HANDLER_PREFIX, self.BLOG_ADMIN_USERNAME
-            ), expected_status_int=200
+            f'{ACCESS_VALIDATION_HANDLER_PREFIX}/can_access_blog_author_profile_page/{self.BLOG_ADMIN_USERNAME}',
+            expected_status_int=200,
         )
         self.logout()
 
     def test_blog_author_profile_page_access_as_blog_admin(self) -> None:
         self.login(self.BLOG_ADMIN_EMAIL)
         self.get_html_response(
-            '%s/can_access_blog_author_profile_page/%s' % (
-            ACCESS_VALIDATION_HANDLER_PREFIX, self.BLOG_ADMIN_USERNAME
-            ), expected_status_int=200
+            f'{ACCESS_VALIDATION_HANDLER_PREFIX}/can_access_blog_author_profile_page/{self.BLOG_ADMIN_USERNAME}',
+            expected_status_int=200,
         )
         self.logout()
 
@@ -372,9 +382,8 @@ class BlogAuthorProfilePageAccessValidationHandlerTests(
         self.signup(self.VIEWER_EMAIL, self.VIEWER_USERNAME)
         self.login(self.VIEWER_EMAIL)
         self.get_json(
-            '%s/can_access_blog_author_profile_page/%s' % (
-            ACCESS_VALIDATION_HANDLER_PREFIX, self.VIEWER_USERNAME
-            ), expected_status_int=404
+            f'{ACCESS_VALIDATION_HANDLER_PREFIX}/can_access_blog_author_profile_page/{self.VIEWER_USERNAME}',
+            expected_status_int=404,
         )
         self.logout()
 
@@ -384,8 +393,7 @@ class BlogAuthorProfilePageAccessValidationHandlerTests(
         self.signup(self.VIEWER_EMAIL, self.VIEWER_USERNAME)
         self.login(self.VIEWER_EMAIL)
         self.get_json(
-            '%s/can_access_blog_author_profile_page/invalid_username' % (
-            ACCESS_VALIDATION_HANDLER_PREFIX
-            ), expected_status_int=404
+            f'{ACCESS_VALIDATION_HANDLER_PREFIX}/can_access_blog_author_profile_page/invalid_username',
+            expected_status_int=404,
         )
         self.logout()

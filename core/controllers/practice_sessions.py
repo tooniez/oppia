@@ -70,11 +70,7 @@ class PracticeSessionsPage(
                 _,
                 _
             ) = self.request.path.split('/')
-            self.redirect(
-                '/learn/%s/%s/practice' % (
-                    classroom_url_fragment, topic_url_fragment
-                )
-            )
+            self.redirect(f'/learn/{classroom_url_fragment}/{topic_url_fragment}/practice')
             return
         super().handle_exception(exception, unused_debug_mode)
 
@@ -132,10 +128,9 @@ class PracticeSessionsPageDataHandler(
             skills = skill_fetchers.get_multi_skills(selected_skill_ids)
         except Exception as e:
             raise self.PageNotFoundException(e)
-        skill_ids_to_descriptions_map = {}
-        for skill in skills:
-            skill_ids_to_descriptions_map[skill.id] = skill.description
-
+        skill_ids_to_descriptions_map = {
+            skill.id: skill.description for skill in skills
+        }
         self.values.update({
             'topic_name': topic.name,
             'skill_ids_to_descriptions_map': skill_ids_to_descriptions_map

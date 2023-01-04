@@ -72,9 +72,9 @@ class ProfileHandler(
         is_already_subscribed = (self.user_id in subscriber_ids)
         is_user_visiting_own_profile = (self.user_id == user_settings.user_id)
 
-        user_contributions = user_services.get_user_contributions(
-            user_settings.user_id)
-        if user_contributions:
+        if user_contributions := user_services.get_user_contributions(
+            user_settings.user_id
+        ):
             created_exp_summary_dicts = (
                 summary_services.get_displayable_exp_summary_dicts_matching_ids(
                     user_contributions.created_exploration_ids))
@@ -83,22 +83,24 @@ class ProfileHandler(
                     user_contributions.edited_exploration_ids))
         profile_is_of_current_user = (self.username == username)
 
-        self.values.update({
-            'profile_is_of_current_user': profile_is_of_current_user,
-            'username_of_viewed_profile': user_settings.username,
-            'user_bio': user_settings.user_bio,
-            'subject_interests': user_settings.subject_interests,
-            'first_contribution_msec': (
-                user_settings.first_contribution_msec
-                if user_settings.first_contribution_msec else None),
-            'profile_picture_data_url': user_settings.profile_picture_data_url,
-            'user_impact_score': user_services.get_user_impact_score(
-                user_settings.user_id),
-            'created_exp_summary_dicts': created_exp_summary_dicts,
-            'edited_exp_summary_dicts': edited_exp_summary_dicts,
-            'is_already_subscribed': is_already_subscribed,
-            'is_user_visiting_own_profile': is_user_visiting_own_profile
-        })
+        self.values.update(
+            {
+                'profile_is_of_current_user': profile_is_of_current_user,
+                'username_of_viewed_profile': user_settings.username,
+                'user_bio': user_settings.user_bio,
+                'subject_interests': user_settings.subject_interests,
+                'first_contribution_msec': user_settings.first_contribution_msec
+                or None,
+                'profile_picture_data_url': user_settings.profile_picture_data_url,
+                'user_impact_score': user_services.get_user_impact_score(
+                    user_settings.user_id
+                ),
+                'created_exp_summary_dicts': created_exp_summary_dicts,
+                'edited_exp_summary_dicts': edited_exp_summary_dicts,
+                'is_already_subscribed': is_already_subscribed,
+                'is_user_visiting_own_profile': is_user_visiting_own_profile,
+            }
+        )
         self.render_json(self.values)
 
 
@@ -324,8 +326,8 @@ class PreferencesHandler(base.BaseHandler[Dict[str, str], Dict[str, str]]):
         if update_type == 'user_bio':
             if len(data) > feconf.MAX_BIO_LENGTH_IN_CHARS:
                 raise self.InvalidInputException(
-                    'User bio exceeds maximum character limit: %s'
-                    % feconf.MAX_BIO_LENGTH_IN_CHARS)
+                    f'User bio exceeds maximum character limit: {feconf.MAX_BIO_LENGTH_IN_CHARS}'
+                )
 
             user_services.update_user_bio(self.user_id, data)
         elif update_type == 'subject_interests':
@@ -353,8 +355,7 @@ class PreferencesHandler(base.BaseHandler[Dict[str, str], Dict[str, str]]):
                     data['can_receive_feedback_message_email'],
                     data['can_receive_subscription_email']))
         else:
-            raise self.InvalidInputException(
-                'Invalid update type: %s' % update_type)
+            raise self.InvalidInputException(f'Invalid update type: {update_type}')
 
         self.render_json({
             'bulk_email_signup_message_should_be_shown': (
@@ -562,10 +563,9 @@ class SignupHandler(
         # Ruling out the possibility of None for mypy type checking.
         assert self.user_id is not None
         has_ever_registered = user_services.has_ever_registered(self.user_id)
-        has_fully_registered_account = (
-            user_services.has_fully_registered_account(self.user_id))
-
-        if has_fully_registered_account:
+        if has_fully_registered_account := (
+            user_services.has_fully_registered_account(self.user_id)
+        ):
             self.render_json({})
             return
 
@@ -633,24 +633,21 @@ class ExportAccountHandler(base.BaseHandler[Dict[str, str], Dict[str, str]]):
         user_data_json_string = json.dumps(user_data)
         if re.search(feconf.USER_ID_REGEX, user_data_json_string):
             logging.error(
-                '[TAKEOUT] User ID found in the JSON generated for user %s'
-                % self.user_id)
-            user_data_json_string = (
-                'There was an error while exporting ' +
-                'data. Please contact %s to export your data.'
-                % feconf.ADMIN_EMAIL_ADDRESS)
+                f'[TAKEOUT] User ID found in the JSON generated for user {self.user_id}'
+            )
+            user_data_json_string = f'There was an error while exporting data. Please contact {feconf.ADMIN_EMAIL_ADDRESS} to export your data.'
             user_images = []
 
         # Create zip file.
         temp_file = io.BytesIO()
         with zipfile.ZipFile(
-            temp_file, mode='w', compression=zipfile.ZIP_DEFLATED
-        ) as zfile:
+                temp_file, mode='w', compression=zipfile.ZIP_DEFLATED
+            ) as zfile:
             zfile.writestr('oppia_takeout_data.json', user_data_json_string)
             for image in user_images:
                 decoded_png = utils.convert_png_data_url_to_binary(
                     image.b64_image_data)
-                zfile.writestr('images/' + image.image_export_path, decoded_png)
+                zfile.writestr(f'images/{image.image_export_path}', decoded_png)
 
         # Render file for download.
         self.render_downloadable_file(
@@ -784,23 +781,25 @@ class UserInfoHandler(
             ).actions
             user_settings = user_services.get_user_settings(
                 self.user_id, strict=True)
-            self.render_json({
-                'roles': self.roles,
-                'is_moderator': (
-                    user_services.is_moderator(self.user_id)),
-                'is_curriculum_admin': user_services.is_curriculum_admin(
-                    self.user_id),
-                'is_super_admin': self.current_user_is_super_admin,
-                'is_topic_manager': (
-                    user_services.is_topic_manager(self.user_id)),
-                'can_create_collections': bool(
-                    role_services.ACTION_CREATE_COLLECTION in user_actions),
-                'preferred_site_language_code': (
-                    user_settings.preferred_site_language_code),
-                'username': user_settings.username,
-                'email': user_settings.email,
-                'user_is_logged_in': True
-            })
+            self.render_json(
+                {
+                    'roles': self.roles,
+                    'is_moderator': (user_services.is_moderator(self.user_id)),
+                    'is_curriculum_admin': user_services.is_curriculum_admin(
+                        self.user_id
+                    ),
+                    'is_super_admin': self.current_user_is_super_admin,
+                    'is_topic_manager': (
+                        user_services.is_topic_manager(self.user_id)
+                    ),
+                    'can_create_collections': role_services.ACTION_CREATE_COLLECTION
+                    in user_actions,
+                    'preferred_site_language_code': user_settings.preferred_site_language_code,
+                    'username': user_settings.username,
+                    'email': user_settings.email,
+                    'user_is_logged_in': True,
+                }
+            )
         else:
             self.render_json({
                 'user_is_logged_in': False

@@ -53,9 +53,7 @@ def normalize_comma_separated_ids(comma_separated_ids: str) -> List[str]:
     Returns:
         list(str). A list of question IDs.
     """
-    if not comma_separated_ids:
-        return list([])
-    return list(comma_separated_ids.split(','))
+    return list(comma_separated_ids.split(',')) if comma_separated_ids else []
 
 
 class DiagnosticTestQuestionsHandlerNormalizedRequestDict(TypedDict):

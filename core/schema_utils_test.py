@@ -244,10 +244,9 @@ def _validate_ui_config(obj_type: str, ui_config: Dict[str, Any]) -> None:
             AssertionError. The object fails to validate against the schema.
     """
     reference_dict = UI_CONFIG_SPECS[obj_type]
-    assert set(ui_config.keys()) <= set(reference_dict.keys()), (
-        'Missing keys: %s, Extra keys: %s' % (
-            list(set(reference_dict.keys()) - set(ui_config.keys())),
-            list(set(ui_config.keys()) - set(reference_dict.keys()))))
+    assert set(ui_config.keys()) <= set(
+        reference_dict.keys()
+    ), f'Missing keys: {list(set(reference_dict.keys()) - set(ui_config.keys()))}, Extra keys: {list(set(ui_config.keys()) - set(reference_dict.keys()))}'
     for key, value in ui_config.items():
         schema_utils.normalize_against_schema(
             value, reference_dict[key])
@@ -265,23 +264,17 @@ def _validate_validator(obj_type: str, validator: Dict[str, Any]) -> None:
     Raises:
         AssertionError. The object fails to validate against the schema.
     """
-    reference_dict = VALIDATOR_SPECS[obj_type]
     assert 'id' in validator, 'id is not present in validator'
-    assert validator['id'] in reference_dict, (
-        '%s is not present in reference_dict' % validator['id'])
+    reference_dict = VALIDATOR_SPECS[obj_type]
+    assert (
+        validator['id'] in reference_dict
+    ), f"{validator['id']} is not present in reference_dict"
 
     customization_keys = list(validator.keys())
     customization_keys.remove('id')
-    assert (
-        set(customization_keys) ==
-        set(reference_dict[validator['id']].keys())), (
-            'Missing keys: %s, Extra keys: %s' % (
-                list(
-                    set(reference_dict[validator['id']].keys()) -
-                    set(customization_keys)),
-                list(
-                    set(customization_keys) -
-                    set(reference_dict[validator['id']].keys()))))
+    assert set(customization_keys) == set(
+        reference_dict[validator['id']].keys()
+    ), f"Missing keys: {list(set(reference_dict[validator['id']].keys()) - set(customization_keys))}, Extra keys: {list(set(customization_keys) - set(reference_dict[validator['id']].keys()))}"
     for key in customization_keys:
         value = validator[key]
         schema = reference_dict[validator['id']][key]
@@ -293,14 +286,8 @@ def _validate_validator(obj_type: str, validator: Dict[str, Any]) -> None:
     # Check that the id corresponds to a valid normalizer function.
     validator_fn = schema_utils.get_validator(validator['id'])
     assert set(inspect.getfullargspec(validator_fn).args) == set(
-        customization_keys + ['obj']), (
-            'Missing keys: %s, Extra keys: %s' % (
-                list(
-                    set(customization_keys + ['obj']) -
-                    set(inspect.getfullargspec(validator_fn).args)),
-                list(
-                    set(inspect.getfullargspec(validator_fn).args) -
-                    set(customization_keys + ['obj']))))
+        customization_keys + ['obj']
+    ), f"Missing keys: {list(set(customization_keys + ['obj']) - set(inspect.getfullargspec(validator_fn).args))}, Extra keys: {list(set(inspect.getfullargspec(validator_fn).args) - set(customization_keys + ['obj']))}"
 
 
 # Here we use type Any because here we are only concerned about the keys
@@ -323,10 +310,12 @@ def _validate_dict_keys(
         AssertionError. The dict is missing required keys.
         AssertionError. The dict contains extra keys.
     """
-    assert set(required_keys) <= set(dict_to_check.keys()), (
-        'Missing keys: %s' % dict_to_check)
-    assert set(dict_to_check.keys()) <= set(required_keys + optional_keys), (
-        'Extra keys: %s' % dict_to_check)
+    assert set(required_keys) <= set(
+        dict_to_check.keys()
+    ), f'Missing keys: {dict_to_check}'
+    assert set(dict_to_check.keys()) <= set(
+        required_keys + optional_keys
+    ), f'Extra keys: {dict_to_check}'
 
 
 # Here we use type Any because schema can have a recursive structure and
@@ -360,11 +349,13 @@ def validate_schema(schema: Dict[str, Any]) -> None:
     Raises:
         AssertionError. The schema is not valid.
     """
-    assert isinstance(schema, dict), ('Expected dict, got %s' % schema)
-    assert SCHEMA_KEY_TYPE in schema, (
-        '%s is not present in schema key types' % SCHEMA_KEY_TYPE)
-    assert schema[SCHEMA_KEY_TYPE] in ALLOWED_SCHEMA_TYPES, (
-        '%s is not an allowed schema type' % schema[SCHEMA_KEY_TYPE])
+    assert isinstance(schema, dict), f'Expected dict, got {schema}'
+    assert (
+        SCHEMA_KEY_TYPE in schema
+    ), f'{SCHEMA_KEY_TYPE} is not present in schema key types'
+    assert (
+        schema[SCHEMA_KEY_TYPE] in ALLOWED_SCHEMA_TYPES
+    ), f'{schema[SCHEMA_KEY_TYPE]} is not an allowed schema type'
     if schema[SCHEMA_KEY_TYPE] == SCHEMA_TYPE_CUSTOM:
         _validate_dict_keys(
             schema,
@@ -379,32 +370,34 @@ def validate_schema(schema: Dict[str, Any]) -> None:
 
         validate_schema(schema[SCHEMA_KEY_ITEMS])
         if SCHEMA_KEY_LEN in schema:
-            assert isinstance(schema[SCHEMA_KEY_LEN], int), (
-                'Expected int, got %s' % schema[SCHEMA_KEY_LEN])
-            assert schema[SCHEMA_KEY_LEN] > 0, (
-                'Expected length greater than 0, got %s' % (
-                    schema[SCHEMA_KEY_LEN]))
+            assert isinstance(
+                schema[SCHEMA_KEY_LEN], int
+            ), f'Expected int, got {schema[SCHEMA_KEY_LEN]}'
+            assert (
+                schema[SCHEMA_KEY_LEN] > 0
+            ), f'Expected length greater than 0, got {schema[SCHEMA_KEY_LEN]}'
     elif schema[SCHEMA_KEY_TYPE] == SCHEMA_TYPE_DICT:
         _validate_dict_keys(
             schema,
             [SCHEMA_KEY_PROPERTIES, SCHEMA_KEY_TYPE],
             OPTIONAL_SCHEMA_KEYS)
 
-        assert isinstance(schema[SCHEMA_KEY_PROPERTIES], list), (
-            'Expected list, got %s' % schema[SCHEMA_KEY_LEN])
+        assert isinstance(
+            schema[SCHEMA_KEY_PROPERTIES], list
+        ), f'Expected list, got {schema[SCHEMA_KEY_LEN]}'
         for prop in schema[SCHEMA_KEY_PROPERTIES]:
             _validate_dict_keys(
                 prop,
                 [SCHEMA_KEY_NAME, SCHEMA_KEY_SCHEMA],
                 [SCHEMA_KEY_DESCRIPTION])
-            assert isinstance(prop[SCHEMA_KEY_NAME], str), (
-                'Expected %s, got %s' % (str, prop[SCHEMA_KEY_NAME]))
+            assert isinstance(
+                prop[SCHEMA_KEY_NAME], str
+            ), f'Expected {str}, got {prop[SCHEMA_KEY_NAME]}'
             validate_schema(prop[SCHEMA_KEY_SCHEMA])
             if SCHEMA_KEY_DESCRIPTION in prop:
                 assert isinstance(
-                    prop[SCHEMA_KEY_DESCRIPTION], str), (
-                        'Expected %s, got %s' % (
-                            str, prop[SCHEMA_KEY_DESCRIPTION]))
+                    prop[SCHEMA_KEY_DESCRIPTION], str
+                ), f'Expected {str}, got {prop[SCHEMA_KEY_DESCRIPTION]}'
     elif schema[SCHEMA_KEY_TYPE] == SCHEMA_TYPE_DICT_WITH_VARIABLE_NO_OF_KEYS:
         _validate_dict_keys(
             schema,
@@ -413,9 +406,7 @@ def validate_schema(schema: Dict[str, Any]) -> None:
         )
         items = [SCHEMA_KEY_VALUES, SCHEMA_KEY_KEYS]
         for item in items:
-            assert isinstance(schema[item], dict), (
-                'Expected dict, got %s' % (schema[item])
-            )
+            assert isinstance(schema[item], dict), f'Expected dict, got {schema[item]}'
             _validate_dict_keys(
                 schema[item],
                 [SCHEMA_KEY_SCHEMA],
@@ -438,25 +429,27 @@ def validate_schema(schema: Dict[str, Any]) -> None:
             schema[SCHEMA_KEY_TYPE], schema[SCHEMA_KEY_UI_CONFIG])
 
     if SCHEMA_KEY_POST_NORMALIZERS in schema:
-        assert isinstance(schema[SCHEMA_KEY_POST_NORMALIZERS], list), (
-            'Expected list, got %s' % schema[SCHEMA_KEY_POST_NORMALIZERS])
+        assert isinstance(
+            schema[SCHEMA_KEY_POST_NORMALIZERS], list
+        ), f'Expected list, got {schema[SCHEMA_KEY_POST_NORMALIZERS]}'
         for post_normalizer in schema[SCHEMA_KEY_POST_NORMALIZERS]:
-            assert isinstance(post_normalizer, dict), (
-                'Expected dict, got %s' % post_normalizer)
-            assert 'id' in post_normalizer, (
-                'id is not present in %s' % post_normalizer)
+            assert isinstance(
+                post_normalizer, dict
+            ), f'Expected dict, got {post_normalizer}'
+            assert 'id' in post_normalizer, f'id is not present in {post_normalizer}'
             # Check that the id corresponds to a valid normalizer function.
             schema_utils.Normalizers.get(post_normalizer['id'])
-            # TODO(sll): Check the arguments too.
+                    # TODO(sll): Check the arguments too.
 
     if SCHEMA_KEY_VALIDATORS in schema:
-        assert isinstance(schema[SCHEMA_KEY_VALIDATORS], list), (
-            'Expected list, got %s' % schema[SCHEMA_KEY_VALIDATORS])
+        assert isinstance(
+            schema[SCHEMA_KEY_VALIDATORS], list
+        ), f'Expected list, got {schema[SCHEMA_KEY_VALIDATORS]}'
         for validator in schema[SCHEMA_KEY_VALIDATORS]:
-            assert isinstance(validator, dict), (
-                'Expected dict, got %s' % schema[SCHEMA_KEY_VALIDATORS])
-            assert 'id' in validator, (
-                'id is not present in %s' % validator)
+            assert isinstance(
+                validator, dict
+            ), f'Expected dict, got {schema[SCHEMA_KEY_VALIDATORS]}'
+            assert 'id' in validator, f'id is not present in {validator}'
             _validate_validator(schema[SCHEMA_KEY_TYPE], validator)
 
 
@@ -1372,34 +1365,37 @@ class SchemaNormalizationUnitTests(test_utils.GenericTestBase):
     def test_notification_user_ids_list_validator(self) -> None:
         schema = email_manager.NOTIFICATION_USER_IDS_LIST_SCHEMA
         valid_user_id_list = [
-            'uid_%s' % (chr(97 + i) * feconf.USER_ID_RANDOM_PART_LENGTH)
-            for i in range(0, 5)
+            f'uid_{chr(97 + i) * feconf.USER_ID_RANDOM_PART_LENGTH}'
+            for i in range(5)
         ]
         big_user_id_list = [
-            'uid_%s' % (chr(97 + i) * feconf.USER_ID_RANDOM_PART_LENGTH)
-            for i in range(0, 7)
+            f'uid_{chr(97 + i) * feconf.USER_ID_RANDOM_PART_LENGTH}'
+            for i in range(7)
         ]
         mappings = [
             (
-                ['uid_%s' % ('a' * feconf.USER_ID_RANDOM_PART_LENGTH)],
-                ['uid_%s' % ('a' * feconf.USER_ID_RANDOM_PART_LENGTH)]
+                [f"uid_{'a' * feconf.USER_ID_RANDOM_PART_LENGTH}"],
+                [f"uid_{'a' * feconf.USER_ID_RANDOM_PART_LENGTH}"],
             ),
-            (valid_user_id_list, valid_user_id_list)]
+            (valid_user_id_list, valid_user_id_list),
+        ]
         invalid_values_with_error_messages = [
             (
-                ['uid_%s' % ('a' * 28)],
+                [f"uid_{'a' * 28}"],
                 re.escape(
                     'Validation failed: is_valid_user_id ({}) for '
                     'object uid_%s' % ('a' * 28)
-                )
+                ),
             ),
             (
                 big_user_id_list,
                 re.escape(
                     'Validation failed: has_length_at_most '
                     '({\'max_value\': 5}) for object ['
-                ) + '.*' + re.escape(']')
-            )
+                )
+                + '.*'
+                + re.escape(']'),
+            ),
         ]
         self.check_normalization(
             schema, mappings, invalid_values_with_error_messages)

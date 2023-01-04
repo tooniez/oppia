@@ -103,8 +103,8 @@ class RecentCommitsHandlerUnitTests(test_utils.GenericTestBase):
             params={'query_type': 'all_non_private_commits'})
         self.assertFalse(response_dict['more'])
         for i in range(feconf.COMMIT_LIST_PAGE_SIZE * 2):
-            entity_id = 'my_entity_%s' % i
-            exp_id = 'exp_%s' % i
+            entity_id = f'my_entity_{i}'
+            exp_id = f'exp_{i}'
 
             commit_i = exp_models.ExplorationCommitLogEntryModel.create(
                 entity_id, 0, self.committer_2_id, 'create', 'created commit',

@@ -147,9 +147,7 @@ class FrontendErrorHandler(
     def post(self) -> None:
         """Records errors reported by the frontend."""
         assert self.normalized_payload is not None
-        logging.error(
-            'Frontend error: %s' % self.normalized_payload.get('error')
-        )
+        logging.error(f"Frontend error: {self.normalized_payload.get('error')}")
         self.render_json(self.values)
 
 

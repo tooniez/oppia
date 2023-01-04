@@ -134,20 +134,21 @@ class AssetDevHandler(base.BaseHandler[Dict[str, str], Dict[str, str]]):
             # If the following is not cast to str, an error occurs in the wsgi
             # library because unicode gets used.
             content_type = (
-                'image/svg+xml' if file_format == 'svg' else '%s/%s' % (
-                    asset_type, file_format))
+                'image/svg+xml'
+                if file_format == 'svg'
+                else f'{asset_type}/{file_format}'
+            )
             self.response.headers['Content-Type'] = content_type
 
             fs = fs_services.GcsFileSystem(page_context, page_identifier)
-            raw = fs.get('%s/%s' % (asset_type, filename))
+            raw = fs.get(f'{asset_type}/{filename}')
 
             self.response.cache_control.no_cache = None
             self.response.cache_control.public = True
             self.response.cache_control.max_age = 600
             self.response.body_file = io.BytesIO(raw)
         except Exception as e:
-            logging.exception(
-                'File not found: %s. %s' % (encoded_filename, e))
+            logging.exception(f'File not found: {encoded_filename}. {e}')
             raise self.PageNotFoundException
 
 

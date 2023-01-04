@@ -131,19 +131,21 @@ class BlogDashboardDataHandler(
         published_post_summary_dicts = []
         no_of_draft_blog_posts = 0
         draft_blog_post_summary_dicts = []
-        published_post_summaries = (
+        if published_post_summaries := (
             blog_services.get_blog_post_summary_models_list_by_user_id(
-                self.user_id, True))
-        if published_post_summaries:
+                self.user_id, True
+            )
+        ):
             no_of_published_blog_posts = len(published_post_summaries)
             published_post_summary_dicts = (
                 _get_blog_card_summary_dicts_for_dashboard(
                     published_post_summaries))
 
-        draft_blog_post_summaries = (
+        if draft_blog_post_summaries := (
             blog_services.get_blog_post_summary_models_list_by_user_id(
-                self.user_id, False))
-        if draft_blog_post_summaries:
+                self.user_id, False
+            )
+        ):
             no_of_draft_blog_posts = len(draft_blog_post_summaries)
             draft_blog_post_summary_dicts = (
                 _get_blog_card_summary_dicts_for_dashboard(
@@ -261,9 +263,9 @@ class BlogPostHandler(
             raise self.PageNotFoundException(
                 'The blog post with the given id or url doesn\'t exist.')
 
-        user_settings = user_services.get_user_settings(
-            blog_post.author_id, strict=False)
-        if user_settings:
+        if user_settings := user_services.get_user_settings(
+            blog_post.author_id, strict=False
+        ):
             profile_picture_data_url = user_settings.profile_picture_data_url
         else:
             profile_picture_data_url = None

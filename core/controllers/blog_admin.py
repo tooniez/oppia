@@ -134,8 +134,8 @@ class BlogAdminHandler(
             for (name, value) in new_config_property_values.items():
                 config_services.set_property(self.user_id, name, value)
             logging.info(
-                '[BLOG ADMIN] %s saved config property values: %s' %
-                (self.user_id, new_config_property_values))
+                f'[BLOG ADMIN] {self.user_id} saved config property values: {new_config_property_values}'
+            )
         else:
             # The handler schema defines the possible values of 'action'.
             # If 'action' has a value other than those defined in the schema,
@@ -152,8 +152,8 @@ class BlogAdminHandler(
             config_services.revert_property(
                 self.user_id, config_property_id)
             logging.info(
-                '[BLOG ADMIN] %s reverted config property: %s' %
-                (self.user_id, config_property_id))
+                f'[BLOG ADMIN] {self.user_id} reverted config property: {config_property_id}'
+            )
         self.render_json({})
 
 
@@ -222,8 +222,7 @@ class BlogAdminRolesHandler(
         username = self.normalized_payload['username']
         user_id = user_services.get_user_id_from_username(username)
         if user_id is None:
-            raise self.InvalidInputException(
-                'Invalid username: %s' % username)
+            raise self.InvalidInputException(f'Invalid username: {username}')
 
         user_services.remove_user_role(user_id, feconf.ROLE_ID_BLOG_POST_EDITOR)
         blog_services.deassign_user_from_all_blog_posts(user_id)

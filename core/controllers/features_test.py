@@ -27,7 +27,7 @@ from typing import Final, List
 
 def exploration_features_url(exp_id: str) -> str:
     """Returns URL for getting which features the given exploration supports."""
-    return '%s/%s' % (feconf.EXPLORATION_FEATURES_PREFIX, exp_id)
+    return f'{feconf.EXPLORATION_FEATURES_PREFIX}/{exp_id}'
 
 
 class ExplorationFeaturesTestBase(test_utils.GenericTestBase):
@@ -74,7 +74,8 @@ class ExplorationPlaythroughRecordingFeatureTest(ExplorationFeaturesTestBase):
     ) -> None:
         self.set_config_property(
             config_domain.WHITELISTED_EXPLORATION_IDS_FOR_PLAYTHROUGHS,
-            [self.EXP_ID + '-differentiate'])
+            [f'{self.EXP_ID}-differentiate'],
+        )
 
         json_response = self.get_json(exploration_features_url(self.EXP_ID))
 

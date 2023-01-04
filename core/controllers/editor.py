@@ -257,8 +257,7 @@ class ExplorationHandler(
         """Deletes the given exploration."""
 
         assert self.user_id is not None
-        log_debug_string = '(%s) %s tried to delete exploration %s' % (
-            self.roles, self.user_id, exploration_id)
+        log_debug_string = f'({self.roles}) {self.user_id} tried to delete exploration {exploration_id}'
         logging.debug(log_debug_string)
 
         is_exploration_cloned = rights_manager.is_exploration_cloned(
@@ -266,8 +265,9 @@ class ExplorationHandler(
         exp_services.delete_exploration(
             self.user_id, exploration_id, force_deletion=is_exploration_cloned)
 
-        log_info_string = '(%s) %s deleted exploration %s' % (
-            self.roles, self.user_id, exploration_id)
+        log_info_string = (
+            f'({self.roles}) {self.user_id} deleted exploration {exploration_id}'
+        )
         logging.info(log_info_string)
         self.render_json(self.values)
 
@@ -738,11 +738,11 @@ class ExplorationFileDownloader(
             version = exploration.version
 
         # If the title of the exploration has changed, we use the new title.
-        if not exploration.title:
-            init_filename = 'oppia-unpublished_exploration-v%s.zip' % version
-        else:
-            init_filename = 'oppia-%s-v%s.zip' % (
-                exploration.title.replace(' ', ''), version)
+        init_filename = (
+            f"oppia-{exploration.title.replace(' ', '')}-v{version}.zip"
+            if exploration.title
+            else f'oppia-unpublished_exploration-v{version}.zip'
+        )
         filename = utils.to_ascii(init_filename)
 
         if output_format == feconf.OUTPUT_FORMAT_ZIP:
@@ -919,8 +919,8 @@ class ExplorationRevertHandler(
 
         if revert_to_version >= current_version:
             raise self.InvalidInputException(
-                'Cannot revert to version %s from version %s.' %
-                (revert_to_version, current_version))
+                f'Cannot revert to version {revert_to_version} from version {current_version}.'
+            )
 
         exp_services.discard_draft(exploration_id, self.user_id)
         exp_services.revert_exploration(
@@ -978,9 +978,10 @@ class StateInteractionStatsHandler(
             exploration_id)
 
         if state_name not in current_exploration.states:
-            logging.exception('Could not find state: %s' % state_name)
-            logging.exception('Available states: %s' % (
-                list(current_exploration.states.keys())))
+            logging.exception(f'Could not find state: {state_name}')
+            logging.exception(
+                f'Available states: {list(current_exploration.states.keys())}'
+            )
             raise self.PageNotFoundException
 
         # TODO(#11475): Return visualizations info based on Apache Beam job.
@@ -1027,12 +1028,11 @@ class FetchIssuesHandler(
         )
         if exp_issues is None:
             raise self.PageNotFoundException(
-                'Invalid version %s for exploration ID %s'
-                % (exp_version, exp_id))
-        unresolved_issues = []
-        for issue in exp_issues.unresolved_issues:
-            if issue.is_valid:
-                unresolved_issues.append(issue)
+                f'Invalid version {exp_version} for exploration ID {exp_id}'
+            )
+        unresolved_issues = [
+            issue for issue in exp_issues.unresolved_issues if issue.is_valid
+        ]
         exp_issues.unresolved_issues = unresolved_issues
         exp_issues_dict = exp_issues.to_dict()
         self.render_json(exp_issues_dict)
@@ -1061,8 +1061,7 @@ class FetchPlaythroughHandler(
         """Handles GET requests."""
         playthrough = stats_services.get_playthrough_by_id(playthrough_id)
         if playthrough is None:
-            raise self.PageNotFoundException(
-                'Invalid playthrough ID %s' % (playthrough_id))
+            raise self.PageNotFoundException(f'Invalid playthrough ID {playthrough_id}')
         self.render_json(playthrough.to_dict())
 
 
@@ -1119,21 +1118,20 @@ class ResolveIssueHandler(
             exp_id, exp_version, strict=False
         )
         if exp_issues is None:
-            raise self.PageNotFoundException(
-                'Invalid exploration ID %s' % (exp_id))
+            raise self.PageNotFoundException(f'Invalid exploration ID {exp_id}')
 
-        # Check that the passed in issue actually exists in the exploration
-        # issues instance.
-        issue_to_remove = None
-        for issue in exp_issues.unresolved_issues:
-            if issue == exp_issue_object:
-                issue_to_remove = issue
-                break
-
+        issue_to_remove = next(
+            (
+                issue
+                for issue in exp_issues.unresolved_issues
+                if issue == exp_issue_object
+            ),
+            None,
+        )
         if not issue_to_remove:
             raise self.PageNotFoundException(
-                'Exploration issue does not exist in the list of issues for '
-                'the exploration with ID %s' % exp_id)
+                f'Exploration issue does not exist in the list of issues for the exploration with ID {exp_id}'
+            )
 
         # Remove the issue from the unresolved issues list.
         exp_issues.unresolved_issues.remove(issue_to_remove)
@@ -1217,10 +1215,10 @@ class ImageUploadHandler(
 
         assert self.normalized_payload is not None
         assert self.normalized_request is not None
-        raw = self.normalized_request['image']
         filename = self.normalized_payload['filename']
         filename_prefix = self.normalized_payload['filename_prefix']
 
+        raw = self.normalized_request['image']
         try:
             file_format = image_validation_services.validate_image_and_filename(
                 raw, filename, entity_type)
@@ -1228,13 +1226,12 @@ class ImageUploadHandler(
             raise self.InvalidInputException(e)
 
         fs = fs_services.GcsFileSystem(entity_type, entity_id)
-        filepath = '%s/%s' % (
-            filename_prefix, filename)
+        filepath = f'{filename_prefix}/{filename}'
 
         if fs.isfile(filepath):
             raise self.InvalidInputException(
-                'A file with the name %s already exists. Please choose a '
-                'different name.' % filename)
+                f'A file with the name {filename} already exists. Please choose a different name.'
+            )
         image_is_compressible = (
             file_format in feconf.COMPRESSIBLE_IMAGE_FORMATS)
         fs_services.save_original_and_compressed_versions_of_image(
@@ -1553,12 +1550,12 @@ class LearnerAnswerInfoHandler(
             raise self.PageNotFoundException
 
         if entity_type == feconf.ENTITY_TYPE_EXPLORATION:
-            state_name = self.normalized_request.get('state_name')
-            if not state_name:
+            if state_name := self.normalized_request.get('state_name'):
+                state_reference = (
+                    stats_services.get_state_reference_for_exploration(
+                        entity_id, state_name))
+            else:
                 raise self.InvalidInputException
-            state_reference = (
-                stats_services.get_state_reference_for_exploration(
-                    entity_id, state_name))
         elif entity_type == feconf.ENTITY_TYPE_QUESTION:
             state_reference = (
                 stats_services.get_state_reference_for_question(

@@ -95,10 +95,9 @@ def validate_arguments_against_schema(
                     # Skip validation because the argument is optional.
                     continue
 
-                if arg_schema['default_value'] is not None:
-                    handler_args[arg_key] = arg_schema['default_value']
+                handler_args[arg_key] = arg_schema['default_value']
             else:
-                errors.append('Missing key in handler args: %s.' % arg_key)
+                errors.append(f'Missing key in handler args: {arg_key}.')
                 continue
 
         # Below normalization is for arguments which are expected to be boolean
@@ -127,7 +126,7 @@ def validate_arguments_against_schema(
     extra_args = set(handler_args.keys()) - set(handler_args_schemas.keys())
 
     if not allowed_extra_args and extra_args:
-        errors.append('Found extra args: %s.' % (list(extra_args)))
+        errors.append(f'Found extra args: {list(extra_args)}.')
 
     return normalized_values, errors
 

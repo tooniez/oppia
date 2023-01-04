@@ -38,8 +38,9 @@ class FractionLandingRedirectPageTest(test_utils.GenericTestBase):
         redirects to the new Fractions landing url.
         """
         response = self.get_html_response(
-            '%s?viewerType=student' % feconf.FRACTIONS_LANDING_PAGE_URL,
-            expected_status_int=302)
+            f'{feconf.FRACTIONS_LANDING_PAGE_URL}?viewerType=student',
+            expected_status_int=302,
+        )
         self.assertEqual(
             'http://localhost/math/fractions',
             response.headers['location'])

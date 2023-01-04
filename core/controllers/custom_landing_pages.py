@@ -59,4 +59,4 @@ class TopicLandingRedirectPage(
         Args:
             topic: str. Topic of page to be redirected to.
         """
-        self.redirect('/math/%s' % topic)
+        self.redirect(f'/math/{topic}')

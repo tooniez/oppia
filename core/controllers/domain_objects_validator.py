@@ -71,7 +71,8 @@ def validate_suggestion_change(
         question_domain.QuestionSuggestionChange(obj)
     else:
         raise base.BaseHandler.InvalidInputException(
-            '%s cmd is not allowed.' % obj['cmd'])
+            f"{obj['cmd']} cmd is not allowed."
+        )
     return obj
 
 
@@ -98,7 +99,7 @@ def validate_new_config_property_values(
                 ': %s' % name)
         config_property = config_domain.Registry.get_config_property(name)
         if config_property is None:
-            raise Exception('%s do not have any schema.' % name)
+            raise Exception(f'{name} do not have any schema.')
 
         config_property.normalize(value)
     # The new_config_property values do not represent a domain class directly
@@ -137,8 +138,9 @@ def validate_change_dict_for_blog_post(
             'list_of_default_tags_for_blog_post')
         assert list_of_default_tags is not None
         list_of_default_tags_value = list_of_default_tags.value
-        if not all(
-            tag in list_of_default_tags_value for tag in change_dict['tags']
+        if any(
+            tag not in list_of_default_tags_value
+            for tag in change_dict['tags']
         ):
             raise Exception(
                 'Invalid tags provided. Tags not in default tags list.')

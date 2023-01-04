@@ -203,8 +203,7 @@ class CollectionRightsHandler(
 
         if collection is None:
             raise Exception(
-                'No collection found for the given collection_id: %s' %
-                collection_id
+                f'No collection found for the given collection_id: {collection_id}'
             )
 
         self.values.update({

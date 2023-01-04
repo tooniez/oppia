@@ -876,8 +876,12 @@ class LearnerDashboardFeedbackUpdatesHandlerTests(test_utils.GenericTestBase):
             self.EXP_ID_1, self.owner_id, title=self.EXP_TITLE_1)
         for i in range(190):
             feedback_services.create_thread(
-                'exploration', self.EXP_ID_1, self.owner_id, 'a subject %s' % i,
-                'some text %s' % i)
+                'exploration',
+                self.EXP_ID_1,
+                self.owner_id,
+                f'a subject {i}',
+                f'some text {i}',
+            )
 
         response = self.post_json(
             feconf.LEARNER_DASHBOARD_FEEDBACK_UPDATES_DATA_URL,
@@ -942,26 +946,28 @@ class LearnerDashboardFeedbackThreadHandlerTests(test_utils.GenericTestBase):
         # Get the CSRF token and create a single thread with a single message.
         self.login(self.EDITOR_EMAIL)
         self.csrf_token = self.get_new_csrf_token()
-        self.post_json('%s/%s' % (
-            feconf.FEEDBACK_THREADLIST_URL_PREFIX, self.EXP_ID_1
-        ), {
-            'subject': self._get_unicode_test_string('subject'),
-            'text': 'a sample message',
-        }, csrf_token=self.csrf_token)
+        self.post_json(
+            f'{feconf.FEEDBACK_THREADLIST_URL_PREFIX}/{self.EXP_ID_1}',
+            {
+                'subject': self._get_unicode_test_string('subject'),
+                'text': 'a sample message',
+            },
+            csrf_token=self.csrf_token,
+        )
         self.logout()
 
     def test_get_message_summaries(self) -> None:
         self.login(self.EDITOR_EMAIL)
         # Fetch all the feedback threads of that exploration.
         response_dict = self.get_json(
-            '%s/%s' % (feconf.FEEDBACK_THREADLIST_URL_PREFIX, self.EXP_ID_1))
+            f'{feconf.FEEDBACK_THREADLIST_URL_PREFIX}/{self.EXP_ID_1}'
+        )
 
         # Get the id of the thread.
         thread_id = response_dict['feedback_thread_dicts'][0]['thread_id']
 
         # Get the message summary of the thread.
-        thread_url = '%s/%s' % (
-            feconf.LEARNER_DASHBOARD_FEEDBACK_THREAD_DATA_URL, thread_id)
+        thread_url = f'{feconf.LEARNER_DASHBOARD_FEEDBACK_THREAD_DATA_URL}/{thread_id}'
         response_dict = self.get_json(thread_url)
         messages_summary = response_dict['message_summary_list']
         first_message = messages_summary[0]
@@ -972,8 +978,7 @@ class LearnerDashboardFeedbackThreadHandlerTests(test_utils.GenericTestBase):
         }, first_message)
 
         # Add another message.
-        thread_url = '%s/%s' % (
-            feconf.FEEDBACK_THREAD_URL_PREFIX, thread_id)
+        thread_url = f'{feconf.FEEDBACK_THREAD_URL_PREFIX}/{thread_id}'
         self.post_json(
             thread_url, {
                 'updated_status': None,
@@ -982,8 +987,7 @@ class LearnerDashboardFeedbackThreadHandlerTests(test_utils.GenericTestBase):
             }, csrf_token=self.csrf_token)
 
         # Again fetch the thread message summary.
-        thread_url = '%s/%s' % (
-            feconf.LEARNER_DASHBOARD_FEEDBACK_THREAD_DATA_URL, thread_id)
+        thread_url = f'{feconf.LEARNER_DASHBOARD_FEEDBACK_THREAD_DATA_URL}/{thread_id}'
         response_dict = self.get_json(thread_url)
         messages_summary = response_dict['message_summary_list']
 
@@ -999,22 +1003,20 @@ class LearnerDashboardFeedbackThreadHandlerTests(test_utils.GenericTestBase):
 
     def test_anonymous_feedback_is_recorded_correctly(self) -> None:
         self.post_json(
-            '/explorehandler/give_feedback/%s' % self.EXP_ID_1,
+            f'/explorehandler/give_feedback/{self.EXP_ID_1}',
             {
                 'feedback': 'This is an anonymous feedback message.',
-            }
+            },
         )
 
         self.login(self.EDITOR_EMAIL)
         response_dict = self.get_json(
-            '%s/%s' %
-            (feconf.FEEDBACK_THREADLIST_URL_PREFIX, self.EXP_ID_1)
+            f'{feconf.FEEDBACK_THREADLIST_URL_PREFIX}/{self.EXP_ID_1}'
         )
         thread_id = response_dict['feedback_thread_dicts'][0]['thread_id']
 
         # Get the message summary of the thread.
-        thread_url = '%s/%s' % (
-            feconf.LEARNER_DASHBOARD_FEEDBACK_THREAD_DATA_URL, thread_id)
+        thread_url = f'{feconf.LEARNER_DASHBOARD_FEEDBACK_THREAD_DATA_URL}/{thread_id}'
         response_dict = self.get_json(thread_url)
         messages_summary = response_dict['message_summary_list'][0]
 
@@ -1041,12 +1043,10 @@ class LearnerDashboardFeedbackThreadHandlerTests(test_utils.GenericTestBase):
         )
 
         response_dict = self.get_json(
-            '%s/%s' %
-            (feconf.FEEDBACK_THREADLIST_URL_PREFIX, self.EXP_ID_1)
+            f'{feconf.FEEDBACK_THREADLIST_URL_PREFIX}/{self.EXP_ID_1}'
         )
         thread_id = response_dict['feedback_thread_dicts'][0]['thread_id']
-        thread_url = '%s/%s' % (
-            feconf.LEARNER_DASHBOARD_FEEDBACK_THREAD_DATA_URL, thread_id)
+        thread_url = f'{feconf.LEARNER_DASHBOARD_FEEDBACK_THREAD_DATA_URL}/{thread_id}'
         with self.swap_to_always_return(
             suggestion_services, 'get_suggestion_by_id', translation_suggestion
         ):
@@ -1061,12 +1061,10 @@ class LearnerDashboardFeedbackThreadHandlerTests(test_utils.GenericTestBase):
         self.login(self.EDITOR_EMAIL)
 
         response_dict = self.get_json(
-            '%s/%s' %
-            (feconf.FEEDBACK_THREADLIST_URL_PREFIX, self.EXP_ID_1)
+            f'{feconf.FEEDBACK_THREADLIST_URL_PREFIX}/{self.EXP_ID_1}'
         )
         thread_id = response_dict['feedback_thread_dicts'][0]['thread_id']
-        thread_url = '%s/%s' % (
-            feconf.LEARNER_DASHBOARD_FEEDBACK_THREAD_DATA_URL, thread_id)
+        thread_url = f'{feconf.LEARNER_DASHBOARD_FEEDBACK_THREAD_DATA_URL}/{thread_id}'
         response_dict = self.get_json(thread_url)
         messages_summary = response_dict['message_summary_list'][0]
 

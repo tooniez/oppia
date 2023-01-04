@@ -124,8 +124,10 @@ class LearnerGroupHandlerTests(test_utils.GenericTestBase):
             'story_ids': ['story_id_1', 'story_id_2']
         }
         response = self.put_json(
-            '/update_learner_group_handler/%s' % (self.learner_group_id),
-            payload, csrf_token=csrf_token)
+            f'/update_learner_group_handler/{self.learner_group_id}',
+            payload,
+            csrf_token=csrf_token,
+        )
 
         self.assertEqual(response['id'], self.learner_group_id)
         self.assertEqual(response['title'], 'Updated Learner Group Title')
@@ -139,8 +141,11 @@ class LearnerGroupHandlerTests(test_utils.GenericTestBase):
 
         # Test bad learner group id.
         self.put_json(
-            '/update_learner_group_handler/%s' % ('bad_learner_group_id'),
-            payload, csrf_token=csrf_token, expected_status_int=400)
+            '/update_learner_group_handler/bad_learner_group_id',
+            payload,
+            csrf_token=csrf_token,
+            expected_status_int=400,
+        )
 
         self.logout()
 
@@ -158,8 +163,11 @@ class LearnerGroupHandlerTests(test_utils.GenericTestBase):
             'story_ids': ['story_id_1', 'story_id_2']
         }
         response = self.put_json(
-            '/update_learner_group_handler/%s' % (self.learner_group_id),
-            payload, csrf_token=csrf_token, expected_status_int=401)
+            f'/update_learner_group_handler/{self.learner_group_id}',
+            payload,
+            csrf_token=csrf_token,
+            expected_status_int=401,
+        )
 
         self.assertEqual(
             response['error'],
@@ -171,14 +179,16 @@ class LearnerGroupHandlerTests(test_utils.GenericTestBase):
         self.login(self.NEW_USER_EMAIL)
 
         response = self.delete_json(
-            '/delete_learner_group_handler/%s' % (self.learner_group_id))
+            f'/delete_learner_group_handler/{self.learner_group_id}'
+        )
 
         self.assertEqual(response['success'], True)
 
         # Test bad learner group id.
         self.delete_json(
-            '/delete_learner_group_handler/%s' % ('bad_learner_group_id'),
-            expected_status_int=400)
+            '/delete_learner_group_handler/bad_learner_group_id',
+            expected_status_int=400,
+        )
 
         self.logout()
 
@@ -186,8 +196,9 @@ class LearnerGroupHandlerTests(test_utils.GenericTestBase):
         self.login(self.USER1_EMAIL)
 
         response = self.delete_json(
-            '/delete_learner_group_handler/%s' % (self.learner_group_id),
-            expected_status_int=401)
+            f'/delete_learner_group_handler/{self.learner_group_id}',
+            expected_status_int=401,
+        )
 
         self.assertEqual(
             response['error'], 'You do not have the rights to delete this '
@@ -208,7 +219,7 @@ class FacilitatorDashboardHandlerTests(test_utils.GenericTestBase):
         self.login(self.NEW_USER_EMAIL)
 
         # There are no learner groups created by new user yet.
-        response = self.get_json('%s' % (feconf.FACILITATOR_DASHBOARD_HANDLER))
+        response = self.get_json(f'{feconf.FACILITATOR_DASHBOARD_HANDLER}')
 
         self.assertEqual(response['learner_groups_list'], [])
 
@@ -221,7 +232,7 @@ class FacilitatorDashboardHandlerTests(test_utils.GenericTestBase):
             learner_group_id, 'Learner Group Title', 'Description',
             [self.facilitator_id], [], ['subtopic_id_1'], ['story_id_1'])
 
-        response = self.get_json('%s' % (feconf.FACILITATOR_DASHBOARD_HANDLER))
+        response = self.get_json(f'{feconf.FACILITATOR_DASHBOARD_HANDLER}')
 
         self.assertEqual(len(response['learner_groups_list']), 1)
         self.assertEqual(
@@ -372,8 +383,8 @@ class ViewLearnerGroupInfoHandlerTests(test_utils.GenericTestBase):
         self.login(self.NEW_USER_EMAIL)
 
         response = self.get_json(
-            '/view_learner_group_info_handler/%s' % (
-                self.learner_group_id))
+            f'/view_learner_group_info_handler/{self.learner_group_id}'
+        )
 
         self.assertEqual(response['id'], self.learner_group_id)
         self.assertEqual(response['title'], self.learner_group.title)
@@ -393,8 +404,9 @@ class ViewLearnerGroupInfoHandlerTests(test_utils.GenericTestBase):
         self.login(self.USER2_EMAIL)
 
         self.get_json(
-            '/view_learner_group_info_handler/%s' % (
-                self.learner_group_id), expected_status_int=401)
+            f'/view_learner_group_info_handler/{self.learner_group_id}',
+            expected_status_int=401,
+        )
 
         self.logout()
 
@@ -564,8 +576,9 @@ class LearnerGroupLearnerProgressHandlerTests(test_utils.GenericTestBase):
         }
 
         response = self.get_json(
-            '/learner_group_user_progress_handler/%s' % (
-                self.learner_group_id), params=params)
+            f'/learner_group_user_progress_handler/{self.learner_group_id}',
+            params=params,
+        )
 
         learners_prog = response
         learner1_stories_prog = learners_prog[0]['stories_progress']
@@ -635,8 +648,10 @@ class LearnerGroupLearnerProgressHandlerTests(test_utils.GenericTestBase):
         }
 
         self.get_json(
-            '/learner_group_user_progress_handler/%s' % (
-                'invalidId'), params=params, expected_status_int=400)
+            '/learner_group_user_progress_handler/invalidId',
+            params=params,
+            expected_status_int=400,
+        )
 
         self.logout()
 
@@ -769,8 +784,8 @@ class LearnerGroupLearnerSpecificProgressHandlerTests(
         self.login(self.LEARNER_1_EMAIL)
 
         response = self.get_json(
-            '/learner_group_learner_specific_progress_handler/%s' % (
-                self.learner_group_id))
+            f'/learner_group_learner_specific_progress_handler/{self.learner_group_id}'
+        )
 
         learner_prog = response
         learner1_stories_prog = learner_prog['stories_progress']
@@ -826,8 +841,9 @@ class LearnerGroupLearnerSpecificProgressHandlerTests(
         self.login(self.LEARNER_1_EMAIL)
 
         self.get_json(
-            '/learner_group_learner_specific_progress_handler/%s' % (
-                'invalidId'), expected_status_int=400)
+            '/learner_group_learner_specific_progress_handler/invalidId',
+            expected_status_int=400,
+        )
 
         self.logout()
 
@@ -996,8 +1012,8 @@ class EditLearnerGroupPageTests(test_utils.GenericTestBase):
         config_services.set_property(
             'admin', 'learner_groups_are_enabled', False)
         self.get_html_response(
-            '/edit-learner-group/%s' % self.learner_group_id,
-            expected_status_int=404)
+            f'/edit-learner-group/{self.learner_group_id}', expected_status_int=404
+        )
         self.logout()
 
     def test_page_with_enabled_learner_groups_loads_correctly_for_facilitator(
@@ -1006,7 +1022,8 @@ class EditLearnerGroupPageTests(test_utils.GenericTestBase):
         config_services.set_property(
             'admin', 'learner_groups_are_enabled', True)
         response = self.get_html_response(
-            '/edit-learner-group/%s' % self.learner_group_id)
+            f'/edit-learner-group/{self.learner_group_id}'
+        )
         response.mustcontain(
             '<oppia-edit-learner-group-page>'
             '</oppia-edit-learner-group-page>')
@@ -1020,8 +1037,8 @@ class EditLearnerGroupPageTests(test_utils.GenericTestBase):
         self.logout()
         self.login(self.NEW_USER_EMAIL)
         self.get_html_response(
-            '/edit-learner-group/%s' % self.learner_group_id,
-            expected_status_int=404)
+            f'/edit-learner-group/{self.learner_group_id}', expected_status_int=404
+        )
         self.logout()
 
 
@@ -1054,9 +1071,10 @@ class LearnerGroupLearnerInvitationHandlerTests(test_utils.GenericTestBase):
             'progress_sharing_permission': 'true'
         }
         response = self.put_json(
-            '/learner_group_learner_invitation_handler/%s' % (
-                self.learner_group_id),
-            payload, csrf_token=csrf_token)
+            f'/learner_group_learner_invitation_handler/{self.learner_group_id}',
+            payload,
+            csrf_token=csrf_token,
+        )
 
         self.assertEqual(response['id'], self.learner_group_id)
         self.assertEqual(
@@ -1073,11 +1091,10 @@ class LearnerGroupLearnerInvitationHandlerTests(test_utils.GenericTestBase):
             'progress_sharing_permission': 'true'
         }
         response = self.put_json(
-            '/learner_group_learner_invitation_handler/%s' % (
-                self.learner_group_id),
+            f'/learner_group_learner_invitation_handler/{self.learner_group_id}',
             payload,
             csrf_token=csrf_token,
-            expected_status_int=500
+            expected_status_int=500,
         )
         self.assertEqual(
             response['error'],
@@ -1095,9 +1112,10 @@ class LearnerGroupLearnerInvitationHandlerTests(test_utils.GenericTestBase):
             'progress_sharing_permission': 'false'
         }
         response = self.put_json(
-            '/learner_group_learner_invitation_handler/%s' % (
-                self.learner_group_id),
-            payload, csrf_token=csrf_token)
+            f'/learner_group_learner_invitation_handler/{self.learner_group_id}',
+            payload,
+            csrf_token=csrf_token,
+        )
 
         self.assertEqual(response['id'], self.learner_group_id)
         self.assertEqual(response['learner_usernames'], [])
@@ -1134,7 +1152,7 @@ class LearnerGroupLearnersInfoHandlerTests(test_utils.GenericTestBase):
     def test_getting_info_of_learners_and_invities(self) -> None:
         self.login(self.OWNER_EMAIL)
         response = self.get_json(
-            '/learner_group_learners_info_handler/%s' % self.learner_group_id
+            f'/learner_group_learners_info_handler/{self.learner_group_id}'
         )
 
         learners_user_settings = user_services.get_users_settings(
@@ -1160,8 +1178,8 @@ class LearnerGroupLearnersInfoHandlerTests(test_utils.GenericTestBase):
         self.login(self.NEW_USER_EMAIL)
 
         response = self.get_json(
-            '/learner_group_learners_info_handler/%s' % self.learner_group_id,
-            expected_status_int=401
+            f'/learner_group_learners_info_handler/{self.learner_group_id}',
+            expected_status_int=401,
         )
         self.assertEqual(
             response['error'],
@@ -1225,7 +1243,7 @@ class LearnerGroupSyllabusHandlerTests(test_utils.GenericTestBase):
     def test_get_learner_group_syllabus(self) -> None:
         self.login(self.NEW_USER_EMAIL)
         response = self.get_json(
-            '/learner_group_syllabus_handler/%s' % self.learner_group_id
+            f'/learner_group_syllabus_handler/{self.learner_group_id}'
         )
 
         self.assertEqual(response['learner_group_id'], self.learner_group_id)
@@ -1300,14 +1318,15 @@ class LearnerStoriesChaptersProgressHandlerTests(test_utils.GenericTestBase):
         self.save_new_valid_exploration(self.exp_id_1, self.USER_ID)
 
         change_list = [
-            story_domain.StoryChange({
-                'cmd': story_domain.CMD_UPDATE_STORY_NODE_PROPERTY,
-                'property_name': (
-                    story_domain.STORY_NODE_PROPERTY_EXPLORATION_ID),
-                'node_id': story_domain.NODE_ID_PREFIX + '1',
-                'old_value': None,
-                'new_value': self.exp_id_1
-            })
+            story_domain.StoryChange(
+                {
+                    'cmd': story_domain.CMD_UPDATE_STORY_NODE_PROPERTY,
+                    'property_name': story_domain.STORY_NODE_PROPERTY_EXPLORATION_ID,
+                    'node_id': f'{story_domain.NODE_ID_PREFIX}1',
+                    'old_value': None,
+                    'new_value': self.exp_id_1,
+                }
+            )
         ]
         story_services.update_story(
             self.USER_ID, self.story_id, change_list,
@@ -1323,8 +1342,9 @@ class LearnerStoriesChaptersProgressHandlerTests(test_utils.GenericTestBase):
             'story_ids': json.dumps([self.story_id])
         }
         response = self.get_json(
-            '/user_progress_in_stories_chapters_handler/%s' % (
-                self.NEW_USER_USERNAME), params=params)
+            f'/user_progress_in_stories_chapters_handler/{self.NEW_USER_USERNAME}',
+            params=params,
+        )
 
         self.assertEqual(len(response), 1)
         self.assertEqual(response[0]['exploration_id'], self.exp_id_1)
@@ -1345,10 +1365,9 @@ class LearnerStoriesChaptersProgressHandlerTests(test_utils.GenericTestBase):
             'story_ids': json.dumps([self.story_id])
         }
         response = self.get_json(
-            '/user_progress_in_stories_chapters_handler/%s' % (
-                'Invalid_username'),
-                params=params,
-                expected_status_int=500
+            '/user_progress_in_stories_chapters_handler/Invalid_username',
+            params=params,
+            expected_status_int=500,
         )
         self.assertEqual(
             response['error'],
@@ -1397,8 +1416,7 @@ class LearnerDashboardLearnerGroupsHandlerTests(test_utils.GenericTestBase):
 
         # User has not joined any learner group and has not been invited to join
         # any learner groups.
-        response = self.get_json(
-            '%s' % (feconf.LEARNER_DASHBOARD_LEARNER_GROUPS_HANDLER))
+        response = self.get_json(f'{feconf.LEARNER_DASHBOARD_LEARNER_GROUPS_HANDLER}')
 
         self.assertEqual(response['learner_groups_joined'], [])
         self.assertEqual(response['invited_to_learner_groups'], [])
@@ -1413,8 +1431,7 @@ class LearnerDashboardLearnerGroupsHandlerTests(test_utils.GenericTestBase):
             [self.facilitator_id], [self.learner_id],
             ['subtopic_id_1'], ['story_id_1'])
 
-        response = self.get_json(
-            '%s' % (feconf.LEARNER_DASHBOARD_LEARNER_GROUPS_HANDLER))
+        response = self.get_json(f'{feconf.LEARNER_DASHBOARD_LEARNER_GROUPS_HANDLER}')
 
         self.assertEqual(len(response['invited_to_learner_groups']), 1)
         self.assertEqual(len(response['learner_groups_joined']), 0)
@@ -1426,8 +1443,7 @@ class LearnerDashboardLearnerGroupsHandlerTests(test_utils.GenericTestBase):
         learner_group_services.add_learner_to_learner_group(
             learner_group_id, self.learner_id, False)
 
-        response = self.get_json(
-            '%s' % (feconf.LEARNER_DASHBOARD_LEARNER_GROUPS_HANDLER))
+        response = self.get_json(f'{feconf.LEARNER_DASHBOARD_LEARNER_GROUPS_HANDLER}')
 
         self.assertEqual(len(response['invited_to_learner_groups']), 0)
         self.assertEqual(len(response['learner_groups_joined']), 1)
@@ -1471,8 +1487,10 @@ class ExitLearnerGroupHandlerTests(test_utils.GenericTestBase):
             'learner_username': self.NEW_USER_USERNAME
         }
         response = self.put_json(
-            '/exit_learner_group_handler/%s' % (learner_group_id),
-            payload, csrf_token=csrf_token)
+            f'/exit_learner_group_handler/{learner_group_id}',
+            payload,
+            csrf_token=csrf_token,
+        )
 
         self.assertEqual(response['id'], learner_group_id)
         self.assertEqual(response['learner_usernames'], [])
@@ -1499,10 +1517,11 @@ class ExitLearnerGroupHandlerTests(test_utils.GenericTestBase):
             'learner_username': 'Invalid_username'
         }
         response = self.put_json(
-            '/exit_learner_group_handler/%s' % (learner_group_id),
+            f'/exit_learner_group_handler/{learner_group_id}',
             payload,
             csrf_token=csrf_token,
-            expected_status_int=500)
+            expected_status_int=500,
+        )
         self.assertEqual(
             response['error'],
             'No learner user_id found for the given learner username: '
@@ -1540,8 +1559,8 @@ class LearnerGroupProgressSharingPermissionHandlerTests(
             self.learner_group_id, self.learner_id, False)
 
         response = self.get_json(
-            '/learner_group_progress_sharing_permission_handler/%s' % (
-                self.learner_group_id))
+            f'/learner_group_progress_sharing_permission_handler/{self.learner_group_id}'
+        )
 
         self.assertEqual(response['progress_sharing_permission'], False)
 
@@ -1558,9 +1577,10 @@ class LearnerGroupProgressSharingPermissionHandlerTests(
             'progress_sharing_permission': 'true'
         }
         response = self.put_json(
-            '/learner_group_progress_sharing_permission_handler/%s' % (
-                self.learner_group_id),
-            payload, csrf_token=csrf_token)
+            f'/learner_group_progress_sharing_permission_handler/{self.learner_group_id}',
+            payload,
+            csrf_token=csrf_token,
+        )
 
         self.assertEqual(response['progress_sharing_permission'], True)
 

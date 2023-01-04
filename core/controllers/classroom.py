@@ -153,7 +153,7 @@ class DefaultClassroomRedirectPage(
     @acl_decorators.open_access
     def get(self) -> None:
         """Handles GET requests."""
-        self.redirect('/learn/%s' % constants.DEFAULT_CLASSROOM_URL_FRAGMENT)
+        self.redirect(f'/learn/{constants.DEFAULT_CLASSROOM_URL_FRAGMENT}')
 
 
 class ClassroomAdminPage(
@@ -295,11 +295,11 @@ class ClassroomUrlFragmentHandler(
     @acl_decorators.can_access_admin_page
     def get(self, classroom_url_fragment: str) -> None:
         """Get request to check whether a classroom with given exists."""
-        classroom_url_fragment_exists = False
-        if classroom_config_services.get_classroom_by_url_fragment(
-                classroom_url_fragment):
-            classroom_url_fragment_exists = True
-
+        classroom_url_fragment_exists = bool(
+            classroom_config_services.get_classroom_by_url_fragment(
+                classroom_url_fragment
+            )
+        )
         self.values.update({
             'classroom_url_fragment_exists': classroom_url_fragment_exists
         })

@@ -127,8 +127,10 @@ class InitializeAndroidTestDataHandler(
             raw_image = f.read()
         fs = fs_services.GcsFileSystem(feconf.ENTITY_TYPE_TOPIC, topic_id)
         fs.commit(
-            '%s/test_svg.svg' % (constants.ASSET_TYPE_THUMBNAIL), raw_image,
-            mimetype='image/svg+xml')
+            f'{constants.ASSET_TYPE_THUMBNAIL}/test_svg.svg',
+            raw_image,
+            mimetype='image/svg+xml',
+        )
         # Update thumbnail properties.
         topic_services.update_thumbnail_filename(topic, 'test_svg.svg')
         topic.update_thumbnail_bg_color('#C6DCDA')
@@ -186,8 +188,10 @@ class InitializeAndroidTestDataHandler(
             raw_image = f.read()
         fs = fs_services.GcsFileSystem(feconf.ENTITY_TYPE_STORY, story_id)
         fs.commit(
-            '%s/test_svg.svg' % (constants.ASSET_TYPE_THUMBNAIL), raw_image,
-            mimetype='image/svg+xml')
+            f'{constants.ASSET_TYPE_THUMBNAIL}/test_svg.svg',
+            raw_image,
+            mimetype='image/svg+xml',
+        )
 
         story.update_node_thumbnail_filename(
             '%s%d' % (story_domain.NODE_ID_PREFIX, 1),
@@ -307,11 +311,15 @@ class InitializeAndroidTestDataHandler(
                 True, [], None, None
             )
         )
-        question = question_domain.Question(
-            question_id, state,
+        return question_domain.Question(
+            question_id,
+            state,
             feconf.CURRENT_STATE_SCHEMA_VERSION,
-            constants.DEFAULT_LANGUAGE_CODE, 0, linked_skill_ids, [])
-        return question
+            constants.DEFAULT_LANGUAGE_CODE,
+            0,
+            linked_skill_ids,
+            [],
+        )
 
     def _create_dummy_skill(
         self, skill_id: str, skill_description: str, explanation: str

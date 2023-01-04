@@ -580,10 +580,8 @@ class NextJobHandlerTest(test_utils.GenericTestBase):
             u'algorithm_version': self.algorithm_version
         }
 
-        self.payload = {}
-        self.payload['vm_id'] = feconf.DEFAULT_VM_ID
         secret = feconf.DEFAULT_VM_SHARED_SECRET
-        self.payload['message'] = json.dumps({})
+        self.payload = {'vm_id': feconf.DEFAULT_VM_ID, 'message': json.dumps({})}
         self.payload['signature'] = classifier_services.generate_signature(
             secret.encode('utf-8'),
             self.payload['message'].encode('utf-8'),

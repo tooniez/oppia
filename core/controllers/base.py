@@ -204,10 +204,7 @@ class BaseHandler(
             raise e
         # TODO(#13155): Remove the if-else part once all the handlers have had
         # schema validation implemented.
-        if payload_json_string:
-            self.payload = json.loads(payload_json_string)
-        else:
-            self.payload = None
+        self.payload = json.loads(payload_json_string) if payload_json_string else None
         self.iframed = False
 
         self.user_id = None
@@ -227,8 +224,7 @@ class BaseHandler(
             return
         except auth_domain.UserDisabledError:
             auth_services.destroy_auth_session(self.response)
-            self.redirect(
-                '/logout?redirect_url=%s' % feconf.PENDING_ACCOUNT_DELETION_URL)
+            self.redirect(f'/logout?redirect_url={feconf.PENDING_ACCOUNT_DELETION_URL}')
             return
         except auth_domain.InvalidAuthSessionError:
             logging.exception('User session is invalid!')
@@ -258,8 +254,8 @@ class BaseHandler(
                         user_services.create_new_user(auth_id, email))
                 else:
                     logging.error(
-                        'Cannot find user %s with email %s on page %s' % (
-                            auth_id, email, self.request.uri))
+                        f'Cannot find user {auth_id} with email {email} on page {self.request.uri}'
+                    )
                     auth_services.destroy_auth_session(self.response)
                     return
 
@@ -321,12 +317,11 @@ class BaseHandler(
             return
 
         if self.user_is_scheduled_for_deletion:
-            self.redirect(
-                '/logout?redirect_url=%s' % feconf.PENDING_ACCOUNT_DELETION_URL)
+            self.redirect(f'/logout?redirect_url={feconf.PENDING_ACCOUNT_DELETION_URL}')
             return
 
         if self.partially_logged_in and request_split.path != '/logout':
-            self.redirect('/logout?redirect_url=%s' % request_split.path)
+            self.redirect(f'/logout?redirect_url={request_split.path}')
             return
 
         if self.payload is not None and self.REQUIRE_PAYLOAD_CSRF_CHECK:
@@ -427,7 +422,7 @@ class BaseHandler(
                 payload_args = self.payload
                 if payload_args is not None:
                     payload_arg_keys = list(payload_args.keys())
-                    handler_args.update(payload_args)
+                    handler_args |= payload_args
             else:
                 request_arg_keys.append(arg)
                 handler_args[arg] = self.request.get(arg)
@@ -441,8 +436,8 @@ class BaseHandler(
 
         if self.URL_PATH_ARGS_SCHEMAS is None:
             raise NotImplementedError(
-                'Missing schema for url path args in %s handler class.' % (
-                    handler_class_name))
+                f'Missing schema for url path args in {handler_class_name} handler class.'
+            )
 
         schema_for_url_path_args = self.URL_PATH_ARGS_SCHEMAS
         self.request.route_kwargs, errors = (
@@ -475,8 +470,8 @@ class BaseHandler(
                 request_method]
         except Exception as e:
             raise NotImplementedError(
-                'Missing schema for %s method in %s handler class.' % (
-                    request_method, handler_class_name)) from e
+                f'Missing schema for {request_method} method in {handler_class_name} handler class.'
+            ) from e
 
         allow_string_to_bool_conversion = request_method in ['GET', 'DELETE']
         normalized_arg_values, errors = (
@@ -557,13 +552,13 @@ class BaseHandler(
 
     # Here we use type Any because the sub-classes of 'Basehandler' can have
     # 'get' method with different number of arguments and types.
-    def get(self, *args: Any, **kwargs: Any) -> None:  # pylint: disable=unused-argument
+    def get(self, *args: Any, **kwargs: Any) -> None:    # pylint: disable=unused-argument
         """Base method to handle GET requests."""
         logging.warning('Invalid URL requested: %s', self.request.uri)
         self.error(404)
         values: ResponseValueDict = {
-            'error': 'Could not find the page %s.' % self.request.uri,
-            'status_code': 404
+            'error': f'Could not find the page {self.request.uri}.',
+            'status_code': 404,
         }
         self._render_exception(values)
 
@@ -643,8 +638,9 @@ class BaseHandler(
             content_type: str. The type of file to be rendered.
         """
         self.response.headers['Content-Type'] = content_type
-        self.response.headers['Content-Disposition'] = (
-            'attachment; filename=%s' % filename)
+        self.response.headers[
+            'Content-Disposition'
+        ] = f'attachment; filename={filename}'
         self.response.charset = 'utf-8'
         # Here we use MyPy ignore because according to MyPy super can
         # accept 'super class and self' as arguments but here we are passing
@@ -694,8 +690,7 @@ class BaseHandler(
                 self.response.headers['X-Frame-Options'] = (
                     str(iframe_restriction))
             else:
-                raise Exception(
-                    'Invalid X-Frame-Options: %s' % iframe_restriction)
+                raise Exception(f'Invalid X-Frame-Options: {iframe_restriction}')
 
         self.response.expires = 'Mon, 01 Jan 1990 00:00:00 GMT'
         self.response.pragma = 'no-cache'
@@ -726,8 +721,7 @@ class BaseHandler(
                 # That's why 404 status code is treated differently.
                 self.render_template('oppia-root.mainpage.html')
             else:
-                self.render_template(
-                    'error-page-%s.mainpage.html' % values['status_code'])
+                self.render_template(f"error-page-{values['status_code']}.mainpage.html")
         else:
             if return_type not in (
                     feconf.HANDLER_TYPE_JSON, feconf.HANDLER_TYPE_DOWNLOADABLE):
@@ -812,8 +806,8 @@ class BaseHandler(
             logging.warning('Invalid URL requested: %s', self.request.uri)
             self.error(404)
             values = {
-                'error': 'Could not find the page %s.' % self.request.uri,
-                'status_code': 404
+                'error': f'Could not find the page {self.request.uri}.',
+                'status_code': 404,
             }
             self._render_exception(values)
             return
@@ -932,12 +926,7 @@ class CsrfTokenManager:
         digester.update(issued_on_str.encode('utf-8'))
 
         digest = digester.digest()
-        # The b64encode returns bytes, so we first need to decode the returned
-        # bytes to string.
-        token = '%s/%s' % (
-            issued_on_str, base64.urlsafe_b64encode(digest).decode('utf-8'))
-
-        return token
+        return f"{issued_on_str}/{base64.urlsafe_b64encode(digest).decode('utf-8')}"
 
     @classmethod
     def _get_current_time(cls) -> float:
@@ -982,10 +971,7 @@ class CsrfTokenManager:
                 return False
 
             authentic_token = cls._create_token(user_id, issued_on)
-            if authentic_token == token:
-                return True
-
-            return False
+            return authentic_token == token
         except Exception:
             return False
 

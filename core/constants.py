@@ -118,9 +118,7 @@ def get_package_file_contents(
         file_data = pkgutil.get_data(package, filepath)
         if file_data is None:
             raise e
-        if binary_mode:
-            return file_data
-        return file_data.decode('utf-8')
+        return file_data if binary_mode else file_data.decode('utf-8')
 
 
 # Here we use MyPy ignore because the flag 'disallow-any-generics' is disabled

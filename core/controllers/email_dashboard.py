@@ -64,7 +64,8 @@ def _generate_user_query_dicts(
         list(dict(str, str)). List of data dicts for the user queries.
     """
     submitters_settings = user_services.get_users_settings(
-        list(set(model.submitter_id for model in user_queries)), strict=True)
+        list({model.submitter_id for model in user_queries}), strict=True
+    )
     user_id_to_username = {
         submitter.user_id: submitter.username
         for submitter in submitters_settings
@@ -284,7 +285,8 @@ class EmailDashboardResultPage(
 
         if user_query.submitter_id != self.user_id:
             raise self.UnauthorizedUserException(
-                '%s is not an authorized user for this query.' % self.username)
+                f'{self.username} is not an authorized user for this query.'
+            )
 
         self.render_template('email-dashboard-result.mainpage.html')
 
@@ -300,7 +302,8 @@ class EmailDashboardResultPage(
 
         if user_query.submitter_id != self.user_id:
             raise self.UnauthorizedUserException(
-                '%s is not an authorized user for this query.' % self.username)
+                f'{self.username} is not an authorized user for this query.'
+            )
 
         email_subject = self.normalized_payload['email_subject']
         email_body = self.normalized_payload['email_body']
@@ -336,7 +339,8 @@ class EmailDashboardCancelEmailHandler(
 
         if user_query.submitter_id != self.user_id:
             raise self.UnauthorizedUserException(
-                '%s is not an authorized user for this query.' % self.username)
+                f'{self.username} is not an authorized user for this query.'
+            )
         user_query_services.archive_user_query(user_query.id)
         self.render_json({})
 
@@ -396,11 +400,12 @@ class EmailDashboardTestBulkEmailHandler(
 
         if user_query.submitter_id != self.user_id:
             raise self.UnauthorizedUserException(
-                '%s is not an authorized user for this query.' % self.username)
+                f'{self.username} is not an authorized user for this query.'
+            )
 
         email_subject = self.normalized_payload['email_subject']
         email_body = self.normalized_payload['email_body']
-        test_email_body = '[This is a test email.]<br><br> %s' % email_body
+        test_email_body = f'[This is a test email.]<br><br> {email_body}'
         email_manager.send_test_email_for_bulk_emails(
             user_query.submitter_id, email_subject, test_email_body)
         self.render_json({})

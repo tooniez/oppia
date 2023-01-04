@@ -92,7 +92,7 @@ SAMPLE_EXPLORATIONS_DIR = os.path.join('data', 'explorations')
 SAMPLE_COLLECTIONS_DIR = os.path.join('data', 'collections')
 CONTENT_VALIDATION_DIR = os.path.join('core', 'domain')
 
-EXTENSIONS_DIR_PREFIX = ('build' if not constants.DEV_MODE else '')
+EXTENSIONS_DIR_PREFIX = '' if constants.DEV_MODE else 'build'
 ACTIONS_DIR = (
     os.path.join(EXTENSIONS_DIR_PREFIX, 'extensions', 'actions'))
 ISSUES_DIR = (
@@ -169,14 +169,6 @@ class ValidModelNames(enum.Enum):
     TOPIC = 'topic'
     TRANSLATION = 'translation'
     USER = 'user'
-
-
-# A mapping of interaction ids to classifier properties.
-# TODO(#10217): As of now we support only one algorithm per interaction.
-# However, we do have the necessary storage infrastructure to support multiple
-# algorithms per interaction. Hence, whenever we find a secondary algorithm
-# candidate for any of the supported interactions, the logical functions to
-# support multiple algorithms need to be implemented.
 
 
 class ClassifierDict(TypedDict):

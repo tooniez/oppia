@@ -129,10 +129,9 @@ def normalize_against_schema(
                 normalized_obj = obj
                 break
         if normalized_obj is None:
-            raise Exception(
-                'Type of %s is not present in options' % obj)
+            raise Exception(f'Type of {obj} is not present in options')
     elif schema[SCHEMA_KEY_TYPE] == SCHEMA_TYPE_BOOL:
-        assert isinstance(obj, bool), ('Expected bool, received %s' % obj)
+        assert isinstance(obj, bool), f'Expected bool, received {obj}'
         normalized_obj = obj
     elif schema[SCHEMA_KEY_TYPE] == SCHEMA_TYPE_CUSTOM:
         # Importing this at the top of the file causes a circular dependency.
@@ -141,21 +140,24 @@ def normalize_against_schema(
         from core.domain import object_registry
         obj_class = object_registry.Registry.get_object_class_by_type(
             schema[SCHEMA_KEY_OBJ_TYPE])
-        if not apply_custom_validators:
-            normalized_obj = normalize_against_schema(
-                obj, obj_class.get_schema(), apply_custom_validators=False)
-        else:
-            normalized_obj = obj_class.normalize(obj)
+        normalized_obj = (
+            obj_class.normalize(obj)
+            if apply_custom_validators
+            else normalize_against_schema(
+                obj, obj_class.get_schema(), apply_custom_validators=False
+            )
+        )
     elif schema[SCHEMA_KEY_TYPE] == SCHEMA_TYPE_DICT:
-        assert isinstance(obj, dict), ('Expected dict, received %s' % obj)
+        assert isinstance(obj, dict), f'Expected dict, received {obj}'
         expected_dict_keys = [
             p[SCHEMA_KEY_NAME] for p in schema[SCHEMA_KEY_PROPERTIES]]
 
         missing_keys = list(sorted(set(expected_dict_keys) - set(obj.keys())))
         extra_keys = list(sorted(set(obj.keys()) - set(expected_dict_keys)))
 
-        assert set(obj.keys()) == set(expected_dict_keys), (
-            'Missing keys: %s, Extra keys: %s' % (missing_keys, extra_keys))
+        assert set(obj.keys()) == set(
+            expected_dict_keys
+        ), f'Missing keys: {missing_keys}, Extra keys: {extra_keys}'
 
         normalized_obj = {}
         for prop in schema[SCHEMA_KEY_PROPERTIES]:
@@ -166,7 +168,7 @@ def normalize_against_schema(
                 global_validators=global_validators
             )
     elif schema[SCHEMA_KEY_TYPE] == SCHEMA_TYPE_DICT_WITH_VARIABLE_NO_OF_KEYS:
-        assert isinstance(obj, dict), ('Expected dict, received %s' % obj)
+        assert isinstance(obj, dict), f'Expected dict, received {obj}'
         normalized_obj = {}
         for key, value in obj.items():
             normalized_key = normalize_against_schema(
@@ -179,43 +181,38 @@ def normalize_against_schema(
             )
     elif schema[SCHEMA_KEY_TYPE] == SCHEMA_TYPE_FLOAT:
         if isinstance(obj, bool):
-            raise Exception('Expected float, received %s' % obj)
+            raise Exception(f'Expected float, received {obj}')
         try:
             obj = float(obj)
         except Exception as e:
-            raise Exception('Could not convert %s to float: %s' % (
-                type(obj).__name__, obj)) from e
-        assert isinstance(obj, numbers.Real), (
-            'Expected float, received %s' % obj)
+            raise Exception(
+                f'Could not convert {type(obj).__name__} to float: {obj}'
+            ) from e
+        assert isinstance(obj, numbers.Real), f'Expected float, received {obj}'
         normalized_obj = obj
     elif schema[SCHEMA_KEY_TYPE] == SCHEMA_TYPE_INT:
         try:
             obj = int(obj)
         except Exception as e:
-            raise Exception('Could not convert %s to int: %s' % (
-                type(obj).__name__, obj)) from e
-        assert isinstance(obj, numbers.Integral), (
-            'Expected int, received %s' % obj)
-        assert isinstance(obj, int), ('Expected int, received %s' % obj)
+            raise Exception(f'Could not convert {type(obj).__name__} to int: {obj}') from e
+        assert isinstance(obj, numbers.Integral), f'Expected int, received {obj}'
+        assert isinstance(obj, int), f'Expected int, received {obj}'
         normalized_obj = obj
     elif schema[SCHEMA_KEY_TYPE] == SCHEMA_TYPE_HTML:
         # TODO(#14028): Use just one type.
-        assert isinstance(obj, (str, bytes)), (
-            'Expected unicode HTML string, received %s' % obj)
-        if isinstance(obj, bytes):
-            obj = obj.decode('utf-8')
-        else:
-            obj = str(obj)
-        assert isinstance(obj, str), (
-            'Expected unicode, received %s' % obj)
+        assert isinstance(
+            obj, (str, bytes)
+        ), f'Expected unicode HTML string, received {obj}'
+        obj = obj.decode('utf-8') if isinstance(obj, bytes) else str(obj)
+        assert isinstance(obj, str), f'Expected unicode, received {obj}'
         normalized_obj = html_cleaner.clean(obj)
     elif schema[SCHEMA_KEY_TYPE] == SCHEMA_TYPE_LIST:
-        assert isinstance(obj, list), ('Expected list, received %s' % obj)
+        assert isinstance(obj, list), f'Expected list, received {obj}'
         item_schema = schema[SCHEMA_KEY_ITEMS]
         if SCHEMA_KEY_LEN in schema:
-            assert len(obj) == schema[SCHEMA_KEY_LEN], (
-                'Expected length of %s got %s' % (
-                    schema[SCHEMA_KEY_LEN], len(obj)))
+            assert (
+                len(obj) == schema[SCHEMA_KEY_LEN]
+            ), f'Expected length of {schema[SCHEMA_KEY_LEN]} got {len(obj)}'
         normalized_obj = [
             normalize_against_schema(
                 item,
@@ -225,31 +222,24 @@ def normalize_against_schema(
         ]
     elif schema[SCHEMA_KEY_TYPE] == SCHEMA_TYPE_BASESTRING:
         # TODO(#14028): Use just one type.
-        assert isinstance(obj, (str, bytes)), (
-            'Expected string, received %s' % obj)
+        assert isinstance(obj, (str, bytes)), f'Expected string, received {obj}'
         normalized_obj = obj
     elif schema[SCHEMA_KEY_TYPE] == SCHEMA_TYPE_UNICODE:
         # TODO(#14028): Use just one type.
-        assert isinstance(obj, (str, bytes)), (
-            'Expected unicode string, received %s' % obj)
-        if isinstance(obj, bytes):
-            obj = obj.decode('utf-8')
-        else:
-            obj = str(obj)
-        assert isinstance(obj, str), (
-            'Expected unicode, received %s' % obj)
+        assert isinstance(
+            obj, (str, bytes)
+        ), f'Expected unicode string, received {obj}'
+        obj = obj.decode('utf-8') if isinstance(obj, bytes) else str(obj)
+        assert isinstance(obj, str), f'Expected unicode, received {obj}'
         normalized_obj = obj
     elif schema[SCHEMA_KEY_TYPE] == SCHEMA_TYPE_UNICODE_OR_NONE:
         # TODO(#14028): Use just one type.
-        assert obj is None or isinstance(obj, (str, bytes)), (
-            'Expected unicode string or None, received %s' % obj)
+        assert obj is None or isinstance(
+            obj, (str, bytes)
+        ), f'Expected unicode string or None, received {obj}'
         if obj is not None:
-            if isinstance(obj, bytes):
-                obj = obj.decode('utf-8')
-            else:
-                obj = str(obj)
-            assert isinstance(obj, str), (
-                'Expected unicode, received %s' % obj)
+            obj = obj.decode('utf-8') if isinstance(obj, bytes) else str(obj)
+            assert isinstance(obj, str), f'Expected unicode, received {obj}'
         normalized_obj = obj
     elif schema[SCHEMA_KEY_TYPE] == SCHEMA_TYPE_OBJECT_DICT:
         # The schema type 'object_dict' accepts either of the keys
@@ -266,19 +256,18 @@ def normalize_against_schema(
             validate_class = schema[SCHEMA_KEY_OBJECT_CLASS]
             domain_object = validate_class.from_dict(obj)
             domain_object.validate()
-            normalized_obj = domain_object
+            return domain_object
         else:
             validation_method = schema[SCHEMA_KEY_VALIDATION_METHOD]
-            normalized_obj = validation_method(obj)
+            return validation_method(obj)
 
-        return normalized_obj
     else:
-        raise Exception('Invalid schema type: %s' % schema[SCHEMA_KEY_TYPE])
+        raise Exception(f'Invalid schema type: {schema[SCHEMA_KEY_TYPE]}')
 
     if SCHEMA_KEY_CHOICES in schema:
-        assert normalized_obj in schema[SCHEMA_KEY_CHOICES], (
-            'Received %s which is not in the allowed range of choices: %s' %
-            (normalized_obj, schema[SCHEMA_KEY_CHOICES]))
+        assert (
+            normalized_obj in schema[SCHEMA_KEY_CHOICES]
+        ), f'Received {normalized_obj} which is not in the allowed range of choices: {schema[SCHEMA_KEY_CHOICES]}'
 
     # When type normalization is finished, apply the post-normalizers in the
     # given order.
@@ -290,34 +279,31 @@ def normalize_against_schema(
                 normalized_obj, **kwargs)
 
     # Validate the normalized object.
-    if apply_custom_validators:
-        if SCHEMA_KEY_VALIDATORS in schema:
-            for validator in schema[SCHEMA_KEY_VALIDATORS]:
-                kwargs = dict(validator)
-                expect_invalid_default_value = False
-                if 'expect_invalid_default_value' in kwargs:
-                    expect_invalid_default_value = kwargs[
-                        'expect_invalid_default_value']
-                    del kwargs['expect_invalid_default_value']
-                del kwargs['id']
-                validator_func = get_validator(validator['id'])
-                if (
+    if apply_custom_validators and SCHEMA_KEY_VALIDATORS in schema:
+        for validator in schema[SCHEMA_KEY_VALIDATORS]:
+            kwargs = dict(validator)
+            expect_invalid_default_value = False
+            if 'expect_invalid_default_value' in kwargs:
+                expect_invalid_default_value = kwargs[
+                    'expect_invalid_default_value']
+                del kwargs['expect_invalid_default_value']
+            del kwargs['id']
+            validator_func = get_validator(validator['id'])
+            if (
                     not validator_func(normalized_obj, **kwargs) and
                     not expect_invalid_default_value
                 ):
-                    raise AssertionError(
-                        'Validation failed: %s (%s) for object %s' % (
-                            validator['id'], kwargs, normalized_obj)
-                    )
+                raise AssertionError(
+                    f"Validation failed: {validator['id']} ({kwargs}) for object {normalized_obj}"
+                )
 
     if global_validators is not None:
         for validator in global_validators:
             kwargs = dict(validator)
             del kwargs['id']
-            assert get_validator(
-                validator['id'])(normalized_obj, **kwargs), (
-                    'Validation failed: %s (%s) for object %s' % (
-                        validator['id'], kwargs, normalized_obj))
+            assert get_validator(validator['id'])(
+                normalized_obj, **kwargs
+            ), f"Validation failed: {validator['id']} ({kwargs}) for object {normalized_obj}"
 
     return normalized_obj
 
@@ -368,7 +354,7 @@ class Normalizers:
             Exception. The normalizer_id is not valid.
         """
         if not hasattr(cls, normalizer_id):
-            raise Exception('Invalid normalizer id: %s' % normalizer_id)
+            raise Exception(f'Invalid normalizer id: {normalizer_id}')
         # Here we use cast because the return value of getattr() method is
         # dynamic and mypy will assume it to be Any otherwise.
         return cast(Callable[..., str], getattr(cls, normalizer_id))
@@ -389,7 +375,7 @@ class Normalizers:
             AssertionError. The string is non-empty and does not start with
                 http:// or https://.
         """
-        if obj == '':
+        if not obj:
             return obj
         url_components = urllib.parse.urlsplit(obj)
         quoted_url_components = [
@@ -446,7 +432,7 @@ class _Validators:
             Exception. Given validator method is invalid.
         """
         if not hasattr(cls, validator_id):
-            raise Exception('Invalid validator id: %s' % validator_id)
+            raise Exception(f'Invalid validator id: {validator_id}')
         # Here we use cast because the return value of getattr() method is
         # dynamic and mypy will assume it to be Any otherwise.
         return cast(Callable[..., bool], getattr(cls, validator_id))
@@ -569,9 +555,7 @@ class _Validators:
         Returns:
             bool. Whether the given object doesn't contain a valid email.
         """
-        if isinstance(obj, str):
-            return not bool(re.search(EMAIL_REGEX, obj))
-        return True
+        return not bool(re.search(EMAIL_REGEX, obj)) if isinstance(obj, str) else True
 
     @staticmethod
     def is_valid_user_id(obj: str) -> bool:
@@ -599,7 +583,7 @@ class _Validators:
         Returns:
             bool. Whether the given object is a valid expression.
         """
-        if len(obj) == 0:
+        if not obj:
             return True
 
         if not expression_parser.is_valid_expression(obj):
@@ -646,7 +630,7 @@ class _Validators:
         Returns:
             bool. Whether the given object is a valid math equation.
         """
-        if len(obj) == 0:
+        if not obj:
             return True
         if obj.count('=') != 1:
             return False
@@ -668,9 +652,7 @@ class _Validators:
         rhs_contains_variable = (
             expression_parser.contains_at_least_one_variable(rhs))
 
-        if not lhs_contains_variable and not rhs_contains_variable:
-            return False
-        return True
+        return bool(lhs_contains_variable or rhs_contains_variable)
 
     @staticmethod
     def is_supported_audio_language_code(obj: str) -> bool:
@@ -720,9 +702,7 @@ class _Validators:
         Returns:
             bool. Whether the given object is a gae search query string.
         """
-        if obj and (not obj.startswith('("') or not obj.endswith('")')):
-            return False
-        return True
+        return bool(not obj or obj.startswith('("') and obj.endswith('")'))
 
     @staticmethod
     def is_valid_username_string(obj: str) -> bool:
@@ -819,9 +799,7 @@ class _Validators:
         try:
             audio = mutagen.mp3.MP3(tempbuffer)
         except mutagen.MutagenError as e:
-            raise Exception(
-                'Audio not recognized as a %s file' % extension
-            ) from e
+            raise Exception(f'Audio not recognized as a {extension} file') from e
 
         if audio.info.length > feconf.MAX_AUDIO_FILE_LENGTH_SEC:
             raise Exception(

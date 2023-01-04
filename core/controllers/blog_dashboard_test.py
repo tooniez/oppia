@@ -87,9 +87,7 @@ class BlogDashboardDataHandlerTests(test_utils.GenericTestBase):
     def test_get_dashboard_page_data(self) -> None:
         # Checks blog editor can access blog dashboard.
         self.login(self.BLOG_EDITOR_EMAIL)
-        json_response = self.get_json(
-            '%s' % (feconf.BLOG_DASHBOARD_DATA_URL),
-            )
+        json_response = self.get_json(f'{feconf.BLOG_DASHBOARD_DATA_URL}')
         self.assertEqual(
             self.BLOG_EDITOR_USERNAME,
             json_response['author_details']['displayed_author_name']
@@ -100,9 +98,7 @@ class BlogDashboardDataHandlerTests(test_utils.GenericTestBase):
 
         # Checks blog admin can access blog dashboard.
         self.login(self.BLOG_ADMIN_EMAIL)
-        json_response = self.get_json(
-            '%s' % (feconf.BLOG_DASHBOARD_DATA_URL),
-            )
+        json_response = self.get_json(f'{feconf.BLOG_DASHBOARD_DATA_URL}')
         self.assertEqual(self.BLOG_ADMIN_USERNAME, json_response['username'])
         self.assertEqual(json_response['published_blog_post_summary_dicts'], [])
         self.assertEqual(json_response['draft_blog_post_summary_dicts'], [])
@@ -111,7 +107,8 @@ class BlogDashboardDataHandlerTests(test_utils.GenericTestBase):
         # Checks non blog-admins and non-editors can not access blog dashboard.
         self.login(self.user_email)
         json_response = self.get_json(
-            '%s' % (feconf.BLOG_DASHBOARD_DATA_URL), expected_status_int=401)
+            f'{feconf.BLOG_DASHBOARD_DATA_URL}', expected_status_int=401
+        )
         self.logout()
 
         # Checks for correct published and draft blog post summary data.
@@ -123,8 +120,7 @@ class BlogDashboardDataHandlerTests(test_utils.GenericTestBase):
             'tags': ['Newsletter', 'Learners']
         }
         self.login(self.BLOG_EDITOR_EMAIL)
-        json_response = self.get_json(
-            '%s' % (feconf.BLOG_DASHBOARD_DATA_URL))
+        json_response = self.get_json(f'{feconf.BLOG_DASHBOARD_DATA_URL}')
         self.assertEqual(self.BLOG_EDITOR_USERNAME, json_response['username'])
         self.assertEqual(
             blog_post.id,
@@ -132,8 +128,7 @@ class BlogDashboardDataHandlerTests(test_utils.GenericTestBase):
 
         blog_services.update_blog_post(blog_post.id, change_dict)
         blog_services.publish_blog_post(blog_post.id)
-        json_response = self.get_json(
-            '%s' % (feconf.BLOG_DASHBOARD_DATA_URL))
+        json_response = self.get_json(f'{feconf.BLOG_DASHBOARD_DATA_URL}')
         self.assertEqual(self.BLOG_EDITOR_USERNAME, json_response['username'])
         self.assertEqual(
             blog_post.id,
@@ -148,7 +143,8 @@ class BlogDashboardDataHandlerTests(test_utils.GenericTestBase):
         self.login(self.BLOG_EDITOR_EMAIL)
         csrf_token = self.get_new_csrf_token()
         json_response = self.post_json(
-            '%s' % (feconf.BLOG_DASHBOARD_DATA_URL), {}, csrf_token=csrf_token)
+            f'{feconf.BLOG_DASHBOARD_DATA_URL}', {}, csrf_token=csrf_token
+        )
         blog_post_id = json_response['blog_post_id']
         blog_post_rights = blog_services.get_blog_post_rights(blog_post_id)
         self.assertEqual(blog_post_rights.editor_ids, [self.blog_editor_id])
@@ -157,8 +153,11 @@ class BlogDashboardDataHandlerTests(test_utils.GenericTestBase):
         # Checks non blog-admins and non editors cannot create a new blog post.
         self.login(self.user_email)
         json_response = self.post_json(
-            '%s' % (feconf.BLOG_DASHBOARD_DATA_URL), {},
-            csrf_token=csrf_token, expected_status_int=401)
+            f'{feconf.BLOG_DASHBOARD_DATA_URL}',
+            {},
+            csrf_token=csrf_token,
+            expected_status_int=401,
+        )
         self.logout()
 
     def test_put_author_data(self) -> None:
@@ -178,8 +177,8 @@ class BlogDashboardDataHandlerTests(test_utils.GenericTestBase):
         self.assertEqual(pre_update_author_details['author_bio'], '')
 
         json_response = self.put_json(
-            '%s' % (feconf.BLOG_DASHBOARD_DATA_URL),
-            payload, csrf_token=csrf_token)
+            f'{feconf.BLOG_DASHBOARD_DATA_URL}', payload, csrf_token=csrf_token
+        )
 
         self.assertEqual(
             json_response['author_details']['displayed_author_name'],
@@ -207,9 +206,11 @@ class BlogDashboardDataHandlerTests(test_utils.GenericTestBase):
         )
 
         self.put_json(
-            '%s' % (feconf.BLOG_DASHBOARD_DATA_URL),
-            payload, csrf_token=csrf_token,
-            expected_status_int=400)
+            f'{feconf.BLOG_DASHBOARD_DATA_URL}',
+            payload,
+            csrf_token=csrf_token,
+            expected_status_int=400,
+        )
 
     def test_put_author_details_with_invalid_author_bio(self) -> None:
         self.login(self.BLOG_EDITOR_EMAIL)
@@ -223,9 +224,11 @@ class BlogDashboardDataHandlerTests(test_utils.GenericTestBase):
         self.assertEqual(pre_update_author_details['author_bio'], '')
 
         self.put_json(
-            '%s' % (feconf.BLOG_DASHBOARD_DATA_URL),
-            payload, csrf_token=csrf_token,
-            expected_status_int=400)
+            f'{feconf.BLOG_DASHBOARD_DATA_URL}',
+            payload,
+            csrf_token=csrf_token,
+            expected_status_int=400,
+        )
 
 
 class BlogPostHandlerTests(test_utils.GenericTestBase):
@@ -257,12 +260,12 @@ class BlogPostHandlerTests(test_utils.GenericTestBase):
         # Checks blog editor can access blog post editor.
         self.login(self.BLOG_EDITOR_EMAIL)
         json_response = self.get_json(
-            '%s/%s' % (feconf.BLOG_EDITOR_DATA_URL_PREFIX, self.blog_post.id),
-            )
+            f'{feconf.BLOG_EDITOR_DATA_URL_PREFIX}/{self.blog_post.id}'
+        )
         self.assertEqual(self.BLOG_EDITOR_USERNAME, json_response['username'])
         assert self.blog_post.last_updated is not None
         expected_blog_post_dict = {
-            'id': u'%s' % self.blog_post.id,
+            'id': f'{self.blog_post.id}',
             'displayed_author_name': self.BLOG_EDITOR_USERNAME,
             'title': '',
             'content': '',
@@ -270,8 +273,8 @@ class BlogPostHandlerTests(test_utils.GenericTestBase):
             'thumbnail_filename': None,
             'url_fragment': '',
             'published_on': None,
-            'last_updated': u'%s' % utils.convert_naive_datetime_to_string(
-                self.blog_post.last_updated)
+            'last_updated': u'%s'
+            % utils.convert_naive_datetime_to_string(self.blog_post.last_updated),
         }
         self.assertEqual(
             expected_blog_post_dict, json_response['blog_post_dict'])
@@ -281,12 +284,12 @@ class BlogPostHandlerTests(test_utils.GenericTestBase):
         # Checks blog admin can access blog post editor for a given blog post.
         self.login(self.BLOG_ADMIN_EMAIL)
         json_response = self.get_json(
-            '%s/%s' % (feconf.BLOG_EDITOR_DATA_URL_PREFIX, self.blog_post.id),
-            )
+            f'{feconf.BLOG_EDITOR_DATA_URL_PREFIX}/{self.blog_post.id}'
+        )
         self.assertEqual(
             self.BLOG_EDITOR_USERNAME, json_response['displayed_author_name'])
         expected_blog_post_dict = {
-            'id': u'%s' % self.blog_post.id,
+            'id': f'{self.blog_post.id}',
             'displayed_author_name': self.BLOG_EDITOR_USERNAME,
             'title': '',
             'content': '',
@@ -294,8 +297,8 @@ class BlogPostHandlerTests(test_utils.GenericTestBase):
             'thumbnail_filename': None,
             'url_fragment': '',
             'published_on': None,
-            'last_updated': u'%s' % utils.convert_naive_datetime_to_string(
-                self.blog_post.last_updated)
+            'last_updated': u'%s'
+            % utils.convert_naive_datetime_to_string(self.blog_post.last_updated),
         }
         self.assertEqual(
             expected_blog_post_dict, json_response['blog_post_dict'])
@@ -305,27 +308,30 @@ class BlogPostHandlerTests(test_utils.GenericTestBase):
         # Checks non blog-admins and non-editors can not access blog editor.
         self.login(self.user_email)
         json_response = self.get_json(
-            '%s/%s' % (feconf.BLOG_EDITOR_DATA_URL_PREFIX, self.blog_post.id),
-            expected_status_int=401)
+            f'{feconf.BLOG_EDITOR_DATA_URL_PREFIX}/{self.blog_post.id}',
+            expected_status_int=401,
+        )
         self.logout()
 
         self.set_curriculum_admins([self.username])
         self.login(self.user_email)
         json_response = self.get_json(
-            '%s/%s' % (feconf.BLOG_EDITOR_DATA_URL_PREFIX, self.blog_post.id),
-            expected_status_int=401)
+            f'{feconf.BLOG_EDITOR_DATA_URL_PREFIX}/{self.blog_post.id}',
+            expected_status_int=401,
+        )
         self.logout()
 
     def test_get_blog_post_data_by_invalid_blog_post_id(self) -> None:
         self.login(self.BLOG_EDITOR_EMAIL)
         self.get_json(
-            '%s/%s' % (feconf.BLOG_EDITOR_DATA_URL_PREFIX, '123'),
-            expected_status_int=500)
+            f'{feconf.BLOG_EDITOR_DATA_URL_PREFIX}/123', expected_status_int=500
+        )
 
         blog_services.delete_blog_post(self.blog_post.id)
         self.get_json(
-            '%s/%s' % (feconf.BLOG_EDITOR_DATA_URL_PREFIX, self.blog_post.id),
-            expected_status_int=404)
+            f'{feconf.BLOG_EDITOR_DATA_URL_PREFIX}/{self.blog_post.id}',
+            expected_status_int=404,
+        )
 
         self.logout()
 
@@ -344,14 +350,14 @@ class BlogPostHandlerTests(test_utils.GenericTestBase):
 
         self.login(self.BLOG_ADMIN_EMAIL)
         json_response = self.get_json(
-            '%s/%s' % (feconf.BLOG_EDITOR_DATA_URL_PREFIX, self.blog_post.id),
-            )
+            f'{feconf.BLOG_EDITOR_DATA_URL_PREFIX}/{self.blog_post.id}'
+        )
         self.assertEqual(
             'new author name', json_response['displayed_author_name'])
         self.assertIsNone(json_response['profile_picture_data_url'])
         assert self.blog_post.last_updated is not None
         expected_blog_post_dict = {
-            'id': u'%s' % self.blog_post.id,
+            'id': f'{self.blog_post.id}',
             'displayed_author_name': 'new author name',
             'title': '',
             'content': '',
@@ -359,8 +365,8 @@ class BlogPostHandlerTests(test_utils.GenericTestBase):
             'thumbnail_filename': None,
             'url_fragment': '',
             'published_on': None,
-            'last_updated': u'%s' % utils.convert_naive_datetime_to_string(
-                self.blog_post.last_updated)
+            'last_updated': u'%s'
+            % utils.convert_naive_datetime_to_string(self.blog_post.last_updated),
         }
         self.assertEqual(
             expected_blog_post_dict, json_response['blog_post_dict'])
@@ -382,8 +388,10 @@ class BlogPostHandlerTests(test_utils.GenericTestBase):
         }
 
         json_response = self.put_json(
-            '%s/%s' % (feconf.BLOG_EDITOR_DATA_URL_PREFIX, self.blog_post.id),
-            payload, csrf_token=csrf_token)
+            f'{feconf.BLOG_EDITOR_DATA_URL_PREFIX}/{self.blog_post.id}',
+            payload,
+            csrf_token=csrf_token,
+        )
 
         self.assertEqual(
             json_response['blog_post']['title'], 'Sample Title')
@@ -405,16 +413,21 @@ class BlogPostHandlerTests(test_utils.GenericTestBase):
         }
 
         self.put_json(
-            '%s/%s' % (feconf.BLOG_EDITOR_DATA_URL_PREFIX, 123),
-            payload, csrf_token=csrf_token,
-            expected_status_int=404)
+            f'{feconf.BLOG_EDITOR_DATA_URL_PREFIX}/123',
+            payload,
+            csrf_token=csrf_token,
+            expected_status_int=404,
+        )
 
         blog_services.delete_blog_post(self.blog_post.id)
         csrf_token = self.get_new_csrf_token()
         # This is raised by acl decorator.
         self.put_json(
-            '%s/%s' % (feconf.BLOG_EDITOR_DATA_URL_PREFIX, self.blog_post.id),
-            payload, csrf_token=csrf_token, expected_status_int=404)
+            f'{feconf.BLOG_EDITOR_DATA_URL_PREFIX}/{self.blog_post.id}',
+            payload,
+            csrf_token=csrf_token,
+            expected_status_int=404,
+        )
 
     def test_update_blog_post_with_invalid_change_dict(self) -> None:
         self.login(self.BLOG_EDITOR_EMAIL)
@@ -426,8 +439,11 @@ class BlogPostHandlerTests(test_utils.GenericTestBase):
             'new_publish_status': False
         }
         response = self.put_json(
-            '%s/%s' % (feconf.BLOG_EDITOR_DATA_URL_PREFIX, self.blog_post.id),
-            payload, csrf_token=csrf_token, expected_status_int=400)
+            f'{feconf.BLOG_EDITOR_DATA_URL_PREFIX}/{self.blog_post.id}',
+            payload,
+            csrf_token=csrf_token,
+            expected_status_int=400,
+        )
         self.assertEqual(
             response['error'], 'Schema validation for \'change_dict\''
             ' failed: Title should be a string.')
@@ -446,8 +462,10 @@ class BlogPostHandlerTests(test_utils.GenericTestBase):
         }
 
         self.put_json(
-            '%s/%s' % (feconf.BLOG_EDITOR_DATA_URL_PREFIX, self.blog_post.id),
-            payload, csrf_token=csrf_token)
+            f'{feconf.BLOG_EDITOR_DATA_URL_PREFIX}/{self.blog_post.id}',
+            payload,
+            csrf_token=csrf_token,
+        )
         blog_post_rights = blog_services.get_blog_post_rights(self.blog_post.id)
         self.assertTrue(blog_post_rights.blog_post_is_published)
 
@@ -458,8 +476,10 @@ class BlogPostHandlerTests(test_utils.GenericTestBase):
             'new_publish_status': False
         }
         self.put_json(
-            '%s/%s' % (feconf.BLOG_EDITOR_DATA_URL_PREFIX, self.blog_post.id),
-            payload, csrf_token=csrf_token)
+            f'{feconf.BLOG_EDITOR_DATA_URL_PREFIX}/{self.blog_post.id}',
+            payload,
+            csrf_token=csrf_token,
+        )
         blog_post_rights = blog_services.get_blog_post_rights(self.blog_post.id)
         self.assertFalse(blog_post_rights.blog_post_is_published)
 
@@ -475,11 +495,12 @@ class BlogPostHandlerTests(test_utils.GenericTestBase):
         ) as f:
             raw_image = f.read()
         self.post_json(
-            '%s/%s' % (feconf.BLOG_EDITOR_DATA_URL_PREFIX, self.blog_post.id),
+            f'{feconf.BLOG_EDITOR_DATA_URL_PREFIX}/{self.blog_post.id}',
             payload,
             csrf_token=csrf_token,
             upload_files=[('image', 'unused_filename', raw_image)],
-            expected_status_int=200)
+            expected_status_int=200,
+        )
 
         self.logout()
 
@@ -497,19 +518,21 @@ class BlogPostHandlerTests(test_utils.GenericTestBase):
             raw_image = f.read()
 
         json_response = self.post_json(
-            '%s/%s' % (feconf.BLOG_EDITOR_DATA_URL_PREFIX, self.blog_post.id),
+            f'{feconf.BLOG_EDITOR_DATA_URL_PREFIX}/{self.blog_post.id}',
             payload,
             csrf_token=csrf_token,
             upload_files=[('image', 'unused_filename', raw_image)],
-            expected_status_int=400)
+            expected_status_int=400,
+        )
 
         self.assertEqual(
             json_response['error'], 'Image exceeds file size limit of 1024 KB.')
 
     def test_guest_can_not_delete_blog_post(self) -> None:
         response = self.delete_json(
-            '%s/%s' % (feconf.BLOG_EDITOR_DATA_URL_PREFIX, self.blog_post.id),
-            expected_status_int=401)
+            f'{feconf.BLOG_EDITOR_DATA_URL_PREFIX}/{self.blog_post.id}',
+            expected_status_int=401,
+        )
         self.assertEqual(
             response['error'],
             'You must be logged in to access this resource.')
@@ -519,33 +542,34 @@ class BlogPostHandlerTests(test_utils.GenericTestBase):
         # Error is raised by acl decorator.
         self.login(self.BLOG_ADMIN_EMAIL)
         self.delete_json(
-            '%s/%s' % (feconf.BLOG_EDITOR_DATA_URL_PREFIX, 123456),
-            expected_status_int=404)
+            f'{feconf.BLOG_EDITOR_DATA_URL_PREFIX}/123456', expected_status_int=404
+        )
         self.logout()
 
         self.login(self.BLOG_ADMIN_EMAIL)
         # The error is raised by acl decorator as the blog post doesn't exist.
         self.delete_json(
-            '%s/%s' % (feconf.BLOG_EDITOR_DATA_URL_PREFIX, 'abc123efgH34'),
-            expected_status_int=404)
+            f'{feconf.BLOG_EDITOR_DATA_URL_PREFIX}/abc123efgH34',
+            expected_status_int=404,
+        )
         self.logout()
 
     def test_blog_post_handler_delete_by_admin(self) -> None:
         # Check that blog admins can delete a blog post.
         self.login(self.BLOG_ADMIN_EMAIL)
         self.delete_json(
-            '%s/%s' % (
-                feconf.BLOG_EDITOR_DATA_URL_PREFIX, self.blog_post.id),
-            expected_status_int=200)
+            f'{feconf.BLOG_EDITOR_DATA_URL_PREFIX}/{self.blog_post.id}',
+            expected_status_int=200,
+        )
         self.logout()
 
     def test_blog_post_handler_delete_by_blog_editor(self) -> None:
         # Check that editor who owns the blog post can delete it.
         self.login(self.BLOG_EDITOR_EMAIL)
         self.delete_json(
-            '%s/%s' % (
-                feconf.BLOG_EDITOR_DATA_URL_PREFIX, self.blog_post.id),
-            expected_status_int=200)
+            f'{feconf.BLOG_EDITOR_DATA_URL_PREFIX}/{self.blog_post.id}',
+            expected_status_int=200,
+        )
         self.logout()
 
     def test_cannot_delete_post_by_blog_editor(self) -> None:
@@ -556,8 +580,8 @@ class BlogPostHandlerTests(test_utils.GenericTestBase):
         self.login(self.user_email)
 
         self.delete_json(
-            '%s/%s' % (
-                feconf.BLOG_EDITOR_DATA_URL_PREFIX, self.blog_post.id),
-            expected_status_int=401)
+            f'{feconf.BLOG_EDITOR_DATA_URL_PREFIX}/{self.blog_post.id}',
+            expected_status_int=401,
+        )
 
         self.logout()

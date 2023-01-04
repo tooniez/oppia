@@ -16,6 +16,7 @@
 
 """Tests for the controller managing incoming feedback reports."""
 
+
 from __future__ import annotations
 
 import datetime
@@ -80,8 +81,8 @@ REPORT_JSON: app_feedback_report_domain.AndroidFeedbackReportDict = {
 ANDROID_API_KEY_STRING = str(android_validation_constants.ANDROID_API_KEY) # pylint: disable=disallowed-function-calls
 ANDROID_APP_PACKAGE_NAME_STRING = str( # pylint: disable=disallowed-function-calls
     android_validation_constants.ANDROID_APP_PACKAGE_NAME)
-ANDROID_APP_VERSION_NAME_STRING = str('1.0.0-flavor-commithash') # pylint: disable=disallowed-function-calls
-ANDROID_APP_VERSION_CODE_STRING = str('2') # pylint: disable=disallowed-function-calls
+ANDROID_APP_VERSION_NAME_STRING = '1.0.0-flavor-commithash'
+ANDROID_APP_VERSION_CODE_STRING = '2'
 
 
 class IncomingAndroidFeedbackReportHandlerTests(test_utils.GenericTestBase):
@@ -122,10 +123,10 @@ class IncomingAndroidFeedbackReportHandlerTests(test_utils.GenericTestBase):
         token = self.get_new_csrf_token()
         # Webtest requires explicit str-types headers.
         invalid_headers = {
-            'api_key': str('bad_key'), # pylint: disable=disallowed-function-calls
-            'app_package_name': str('bad_package_name'), # pylint: disable=disallowed-function-calls
-            'app_version_name': str('bad_version_name'), # pylint: disable=disallowed-function-calls
-            'app_version_code': str('bad_version_code'), # pylint: disable=disallowed-function-calls
+            'api_key': 'bad_key',
+            'app_package_name': 'bad_package_name',
+            'app_version_name': 'bad_version_name',
+            'app_version_code': 'bad_version_code',
         }
         response = self.post_json(
             android_validation_constants.INCOMING_ANDROID_FEEDBACK_REPORT_URL,

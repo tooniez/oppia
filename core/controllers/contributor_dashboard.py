@@ -322,11 +322,13 @@ class ReviewableOpportunitiesHandler(
             opportunity_domain.PartialExplorationOpportunitySummaryDict
         ] = []
         if self.user_id:
-            for opp in self._get_reviewable_exploration_opportunity_summaries(
-                self.user_id, topic_name, language
-            ):
-                if opp is not None:
-                    opportunity_dicts.append(opp.to_dict())
+            opportunity_dicts.extend(
+                opp.to_dict()
+                for opp in self._get_reviewable_exploration_opportunity_summaries(
+                    self.user_id, topic_name, language
+                )
+                if opp is not None
+            )
         self.values = {
             'opportunities': opportunity_dicts,
         }
@@ -367,7 +369,8 @@ class ReviewableOpportunitiesHandler(
             topic = topic_fetchers.get_topic_by_name(topic_name)
             if topic is None:
                 raise self.InvalidInputException(
-                    'The supplied input topic: %s is not valid' % topic_name)
+                    f'The supplied input topic: {topic_name} is not valid'
+                )
             topics = [topic]
         topic_stories = story_fetchers.get_stories_by_ids(
             [
@@ -382,10 +385,7 @@ class ReviewableOpportunitiesHandler(
         for story in topic_stories:
             for node in story.story_contents.get_ordered_nodes():
                 if node.exploration_id is None:
-                    raise Exception(
-                        'No exploration_id found for the node_id: %s'
-                        % node.id
-                    )
+                    raise Exception(f'No exploration_id found for the node_id: {node.id}')
                 topic_exp_ids.append(node.exploration_id)
         in_review_suggestions, _ = (
             suggestion_services
@@ -454,7 +454,7 @@ class TranslatableTextHandler(
 
         if not opportunity_services.is_exploration_available_for_contribution(
                 exp_id):
-            raise self.InvalidInputException('Invalid exp_id: %s' % exp_id)
+            raise self.InvalidInputException(f'Invalid exp_id: {exp_id}')
 
         exp = exp_fetchers.get_exploration_by_id(exp_id)
         state_names_to_content_id_mapping = exp.get_translatable_text(
@@ -507,16 +507,14 @@ class TranslatableTextHandler(
             TranslatableItem as value.
         """
         mapping_without_set_data_format = {}
-        for state_name in state_names_to_content_id_mapping:
-            content_id_to_translatable_item = (
-                state_names_to_content_id_mapping[state_name])
-            content_id_to_not_set_translatable_item = {}
-            for content_id, translatable_item in (
-                    content_id_to_translatable_item.items()):
-                if not translatable_item.is_set_data_format():
-                    content_id_to_not_set_translatable_item[content_id] = (
-                        translatable_item)
-            if content_id_to_not_set_translatable_item:
+        for state_name, content_id_to_translatable_item in state_names_to_content_id_mapping.items():
+            if content_id_to_not_set_translatable_item := {
+                content_id: translatable_item
+                for content_id, translatable_item in (
+                    content_id_to_translatable_item.items()
+                )
+                if not translatable_item.is_set_data_format()
+            }:
                 mapping_without_set_data_format[state_name] = (
                     content_id_to_not_set_translatable_item)
         return mapping_without_set_data_format
@@ -547,13 +545,13 @@ class TranslatableTextHandler(
         for state_name in state_names_to_content_id_mapping:
             content_id_to_translatable_item = dict(
                 state_names_to_content_id_mapping[state_name])
-            content_id_to_unsubmitted_translatable_item = {}
-            for content_id, item in content_id_to_translatable_item.items():
+            if content_id_to_unsubmitted_translatable_item := {
+                content_id: item
+                for content_id, item in content_id_to_translatable_item.items()
                 if not self._is_content_in_review(
-                        state_name, content_id, suggestions):
-                    content_id_to_unsubmitted_translatable_item[content_id] = (
-                        item)
-            if content_id_to_unsubmitted_translatable_item:
+                    state_name, content_id, suggestions
+                )
+            }:
                 final_mapping[state_name] = {
                     cid: translatable_item.to_dict()
                     for cid, translatable_item in (
@@ -677,7 +675,7 @@ class MachineTranslationStateTextsHandler(
             content_ids = json.loads(content_ids_string)
         except Exception as e:
             raise self.InvalidInputException(
-                'Improperly formatted content_ids: %s' % content_ids_string
+                f'Improperly formatted content_ids: {content_ids_string}'
             ) from e
 
         target_language_code = self.normalized_request['target_language_code']
@@ -882,14 +880,14 @@ class ContributorStatsSummariesHandler(
             feconf.CONTRIBUTION_TYPE_QUESTION
         ]:
             raise self.InvalidInputException(
-                'Invalid contribution type %s.' % (contribution_type)
+                f'Invalid contribution type {contribution_type}.'
             )
         if contribution_subtype not in [
             feconf.CONTRIBUTION_SUBTYPE_SUBMISSION,
             feconf.CONTRIBUTION_SUBTYPE_REVIEW
         ]:
             raise self.InvalidInputException(
-                'Invalid contribution subtype %s.' % (contribution_subtype)
+                f'Invalid contribution subtype {contribution_subtype}.'
             )
 
         user_id = user_services.get_user_id_from_username(username)
@@ -1010,8 +1008,7 @@ def _get_client_side_stats(
     for index, stats_dict in enumerate(stats_dicts):
         if stats_dict['topic_id'] is None:
             raise Exception(
-                'No topic_id associated with stats: %s.' %
-                type(backend_stats[index]).__name__
+                f'No topic_id associated with stats: {type(backend_stats[index]).__name__}.'
             )
         topic_ids.append(stats_dict['topic_id'])
     topic_summaries = topic_fetchers.get_multi_topic_summaries(topic_ids)

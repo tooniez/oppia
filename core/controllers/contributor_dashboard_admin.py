@@ -137,7 +137,7 @@ class ContributionRightsHandler(
         user_id = user_services.get_user_id_from_username(username)
 
         if user_id is None:
-            raise self.InvalidInputException('Invalid username: %s' % username)
+            raise self.InvalidInputException(f'Invalid username: {username}')
 
         language_code = self.normalized_payload.get('language_code', None)
 
@@ -157,8 +157,8 @@ class ContributionRightsHandler(
         elif category == constants.CONTRIBUTION_RIGHT_CATEGORY_REVIEW_QUESTION:
             if user_services.can_review_question_suggestions(user_id):
                 raise self.InvalidInputException(
-                    'User %s already has rights to review question.' % (
-                        username))
+                    f'User {username} already has rights to review question.'
+                )
             user_services.allow_user_to_review_question(user_id)
         else:
             # The handler schema defines the possible values of 'category'.
@@ -170,8 +170,8 @@ class ContributionRightsHandler(
                 constants.CONTRIBUTION_RIGHT_CATEGORY_SUBMIT_QUESTION)
             if user_services.can_submit_question_suggestions(user_id):
                 raise self.InvalidInputException(
-                    'User %s already has rights to submit question.' % (
-                        username))
+                    f'User {username} already has rights to submit question.'
+                )
             user_services.allow_user_to_submit_question(user_id)
 
         if category in [
@@ -189,8 +189,7 @@ class ContributionRightsHandler(
         username = self.normalized_request['username']
         user_id = user_services.get_user_id_from_username(username)
         if user_id is None:
-            raise self.InvalidInputException(
-                'Invalid username: %s' % username)
+            raise self.InvalidInputException(f'Invalid username: {username}')
 
         language_code = self.normalized_request.get('language_code')
 
@@ -212,8 +211,8 @@ class ContributionRightsHandler(
                 constants.CONTRIBUTION_RIGHT_CATEGORY_REVIEW_QUESTION):
             if not user_services.can_review_question_suggestions(user_id):
                 raise self.InvalidInputException(
-                    '%s does not have rights to review question.' % (
-                        username))
+                    f'{username} does not have rights to review question.'
+                )
             user_services.remove_question_review_rights(user_id)
         else:
             # The handler schema defines the possible values of 'category'.
@@ -225,8 +224,8 @@ class ContributionRightsHandler(
                 constants.CONTRIBUTION_RIGHT_CATEGORY_SUBMIT_QUESTION)
             if not user_services.can_submit_question_suggestions(user_id):
                 raise self.InvalidInputException(
-                    '%s does not have rights to submit question.' % (
-                        username))
+                    f'{username} does not have rights to submit question.'
+                )
             user_services.remove_question_submit_rights(user_id)
 
         if category in [
@@ -322,8 +321,7 @@ class ContributionRightsDataHandler(
         username = self.normalized_request['username']
         user_id = user_services.get_user_id_from_username(username)
         if user_id is None:
-            raise self.InvalidInputException(
-                'Invalid username: %s' % username)
+            raise self.InvalidInputException(f'Invalid username: {username}')
         user_rights = (
             user_services.get_user_contribution_rights(user_id))
         response: Dict[str, Union[List[str], bool]] = {}
@@ -333,10 +331,10 @@ class ContributionRightsDataHandler(
                     user_rights.can_review_translation_for_language_codes)
             }
         if feconf.ROLE_ID_QUESTION_ADMIN in self.roles:
-            response.update({
+            response |= {
                 'can_review_questions': user_rights.can_review_questions,
-                'can_submit_questions': user_rights.can_submit_questions
-            })
+                'can_submit_questions': user_rights.can_submit_questions,
+            }
         self.render_json(response)
 
 
@@ -374,8 +372,7 @@ class TranslationContributionStatsHandler(
         username = self.normalized_request['username']
         user_id = user_services.get_user_id_from_username(username)
         if user_id is None:
-            raise self.InvalidInputException(
-                'Invalid username: %s' % username)
+            raise self.InvalidInputException(f'Invalid username: {username}')
         translation_contribution_stats = (
             suggestion_services.get_all_translation_contribution_stats(user_id)
         )
@@ -427,12 +424,11 @@ class TranslationContributionStatsHandler(
                 )
             topic_ids.append(stats_dict['topic_id'])
         topic_summaries = topic_fetchers.get_multi_topic_summaries(topic_ids)
-        topic_name_by_topic_id = {}
-        for topic_summary in topic_summaries:
-            if topic_summary is None:
-                continue
-            topic_name_by_topic_id[topic_summary.id] = topic_summary.name
-
+        topic_name_by_topic_id = {
+            topic_summary.id: topic_summary.name
+            for topic_summary in topic_summaries
+            if topic_summary is not None
+        }
         response_translation_contribution_stats_dicts: (
             List[TranslationContributionStatsDict]
         ) = []

@@ -113,17 +113,15 @@ class PracticeSessionsPageDataHandlerTests(BasePracticeSessionsControllerTests):
         topic_services.save_new_topic(self.admin_id, topic)
         topic_services.publish_topic('topic_id_3', self.admin_id)
         self.get_json(
-            '%s/staging/%s?selected_subtopic_ids=[1]' % (
-                feconf.PRACTICE_SESSION_DATA_URL_PREFIX,
-                'noskills'),
-            expected_status_int=404)
+            f'{feconf.PRACTICE_SESSION_DATA_URL_PREFIX}/staging/noskills?selected_subtopic_ids=[1]',
+            expected_status_int=404,
+        )
 
     def test_any_user_can_access_practice_sessions_data(self) -> None:
         # Adding invalid subtopic IDs as well, which should get ignored.
         json_response = self.get_json(
-            '%s/staging/%s?selected_subtopic_ids=[1,2,3,4]' % (
-                feconf.PRACTICE_SESSION_DATA_URL_PREFIX,
-                'public-topic-name'))
+            f'{feconf.PRACTICE_SESSION_DATA_URL_PREFIX}/staging/public-topic-name?selected_subtopic_ids=[1,2,3,4]'
+        )
         self.assertEqual(json_response['topic_name'], 'public_topic_name')
         self.assertEqual(
             len(json_response['skill_ids_to_descriptions_map']), 2)
@@ -138,24 +136,21 @@ class PracticeSessionsPageDataHandlerTests(BasePracticeSessionsControllerTests):
         self
     ) -> None:
         self.get_json(
-            '%s/staging/%s?selected_subtopic_ids=["1","2"]' % (
-                feconf.PRACTICE_SESSION_DATA_URL_PREFIX,
-                'private-topic-name'),
-            expected_status_int=404)
+            f'{feconf.PRACTICE_SESSION_DATA_URL_PREFIX}/staging/private-topic-name?selected_subtopic_ids=["1","2"]',
+            expected_status_int=404,
+        )
 
     def test_get_fails_when_topic_doesnt_exist(self) -> None:
         self.get_json(
-            '%s/staging/%s?selected_subtopic_ids=[1,2]' % (
-                feconf.PRACTICE_SESSION_DATA_URL_PREFIX,
-                'invalid'),
-            expected_status_int=404)
+            f'{feconf.PRACTICE_SESSION_DATA_URL_PREFIX}/staging/invalid?selected_subtopic_ids=[1,2]',
+            expected_status_int=404,
+        )
 
     def test_get_fails_when_json_loads_fails(self) -> None:
         response = self.get_json(
-            '%s/staging/%s?selected_subtopic_ids=1,2' % (
-                feconf.PRACTICE_SESSION_DATA_URL_PREFIX,
-                'invalid'),
-            expected_status_int=400)
+            f'{feconf.PRACTICE_SESSION_DATA_URL_PREFIX}/staging/invalid?selected_subtopic_ids=1,2',
+            expected_status_int=400,
+        )
         error_msg = (
             'Schema validation for \'selected_subtopic_ids\' failed: '
             'Extra data: line 1 column 2 (char 1)'

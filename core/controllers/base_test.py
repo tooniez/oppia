@@ -929,9 +929,10 @@ class I18nDictsTests(test_utils.GenericTestBase):
                 bracket_level += 1
             elif c == '>':
                 self.assertGreater(
-                    bracket_level, 0,
-                    msg='Invalid HTML: %s at %s in %s' % (
-                        input_string, key, filename))
+                    bracket_level,
+                    0,
+                    msg=f'Invalid HTML: {input_string} at {key} in {filename}',
+                )
                 result.append(current_string + c)
                 current_string = ''
                 bracket_level -= 1
@@ -939,8 +940,10 @@ class I18nDictsTests(test_utils.GenericTestBase):
                 current_string += c
 
         self.assertEqual(
-            bracket_level, 0,
-            msg='Invalid HTML: %s at %s in %s' % (input_string, key, filename))
+            bracket_level,
+            0,
+            msg=f'Invalid HTML: {input_string} at {key} in {filename}',
+        )
         return sorted(result)
 
     def test_i18n_keys(self) -> None:
@@ -951,8 +954,9 @@ class I18nDictsTests(test_utils.GenericTestBase):
         self.assertGreater(len(master_key_list), 0)
 
         supported_language_filenames = [
-            ('%s.json' % language_details['id'])
-            for language_details in constants.SUPPORTED_SITE_LANGUAGES]
+            f"{language_details['id']}.json"
+            for language_details in constants.SUPPORTED_SITE_LANGUAGES
+        ]
 
         filenames = os.listdir(
             os.path.join(os.getcwd(), self.get_static_asset_filepath(),
@@ -970,9 +974,9 @@ class I18nDictsTests(test_utils.GenericTestBase):
             if (filename in supported_language_filenames and
                     set(key_list) != set(master_key_list)):
                 untranslated_keys = list(set(master_key_list) - set(key_list))
-                self.log_line('Untranslated keys in %s:' % filename)
+                self.log_line(f'Untranslated keys in {filename}:')
                 for key in untranslated_keys:
-                    self.log_line('- %s' % key)
+                    self.log_line(f'- {key}')
                 self.log_line('')
 
     def test_alphabetic_i18n_keys(self) -> None:
@@ -984,8 +988,8 @@ class I18nDictsTests(test_utils.GenericTestBase):
                          'assets', 'i18n'))
         for filename in filenames:
             with utils.open_file(
-                os.path.join(os.getcwd(), 'assets', 'i18n', filename),
-                mode='r') as f:
+                        os.path.join(os.getcwd(), 'assets', 'i18n', filename),
+                        mode='r') as f:
                 lines = f.readlines()
                 self.assertEqual(lines[0], '{\n')
                 self.assertEqual(lines[-1], '}\n')
@@ -995,7 +999,7 @@ class I18nDictsTests(test_utils.GenericTestBase):
                 for key in key_list:
                     self.assertTrue(key.startswith('"I18N_'))
                     if not key.startswith('"I18N_'):
-                        self.log_line('Bad line in file: %s' % filename)
+                        self.log_line(f'Bad line in file: {filename}')
                 self.assertEqual(sorted(key_list), key_list)
 
     # TODO(#14645): Remove this method when translation service is extended.
@@ -1031,13 +1035,12 @@ class I18nDictsTests(test_utils.GenericTestBase):
                         html_key_list = self._extract_keys_from_html_file(
                             os.path.join(root, filename))
                         if not set(html_key_list) <= set(en_key_list): #pylint: disable=unneeded-not
-                            self.log_line('ERROR: Undefined keys in %s:'
-                                          % os.path.join(root, filename))
+                            self.log_line(f'ERROR: Undefined keys in {os.path.join(root, filename)}:')
                             missing_keys = list(
                                 set(html_key_list) - set(en_key_list))
                             missing_keys_count += len(missing_keys)
                             for key in missing_keys:
-                                self.log_line(' - %s' % key)
+                                self.log_line(f' - {key}')
                             self.log_line('')
         self.assertEqual(missing_keys_count, 0)
         self.assertGreater(files_checked, 0)
@@ -1070,8 +1073,7 @@ class I18nDictsTests(test_utils.GenericTestBase):
             for key, value in translation_dict.items():
                 tags = self._get_tags(value, key, filename)
                 if tags != master_tags_dict[key]:
-                    mismatches.append('%s (%s): %s != %s' % (
-                        filename, key, tags, master_tags_dict[key]))
+                    mismatches.append(f'{filename} ({key}): {tags} != {master_tags_dict[key]}')
 
         # Sorting the list before printing makes it easier to systematically
         # fix any issues that arise.
@@ -1098,8 +1100,7 @@ class GetHandlerTypeIfExceptionRaisedTests(test_utils.GenericTestBase):
     def test_error_response_for_get_request_of_type_json_has_json_format(
         self
     ) -> None:
-        fake_urls = []
-        fake_urls.append(main.get_redirect_route(r'/fake', self.FakeHandler))
+        fake_urls = [main.get_redirect_route(r'/fake', self.FakeHandler)]
         fake_urls.append(main.URLS[-1])
         with self.swap(main, 'URLS', fake_urls):
             self.testapp = webtest.TestApp(
@@ -1160,15 +1161,15 @@ class CheckAllHandlersHaveDecoratorTests(test_utils.GenericTestBase):
 
         self.log_line('Verifying decorators for handlers .... ')
         for (name, method, handler_is_decorated) in handlers_checked:
-            self.log_line('%s %s method: %s' % (
-                name, method, 'PASS' if handler_is_decorated else 'FAIL'))
-        self.log_line(
-            'Total number of handlers checked: %s' % len(handlers_checked))
+            self.log_line(
+                f"{name} {method} method: {'PASS' if handler_is_decorated else 'FAIL'}"
+            )
+        self.log_line(f'Total number of handlers checked: {len(handlers_checked)}')
 
         self.assertGreater(len(handlers_checked), 0)
 
         for (name, method, handler_is_decorated) in handlers_checked:
-            with self.subTest('%s.%s' % (name, method)):
+            with self.subTest(f'{name}.{method}'):
                 self.assertTrue(handler_is_decorated)
 
 
@@ -1258,22 +1259,17 @@ class ControllerClassNameTests(test_utils.GenericTestBase):
                     message = (
                         'Please ensure that the name of this class '
                         'ends with \'%s\'' % allowed_class_ending)
-                    error_message = (
-                        '%s --> Line %s: %s' % (file_name, line_num, message))
+                    error_message = f'{file_name} --> Line {line_num}: {message}'
                     with self.subTest(class_name):
                         self.assertTrue(
                             class_name.endswith(allowed_class_ending),
                             msg=error_message)
 
-                # Check that the name of the class ends with 'Handler'
-                # if it does not has a get function.
                 else:
                     message = (
                         'Please ensure that the name of this class '
                         'ends with \'Handler\'')
-                    error_message = (
-                        '%s --> Line %s: %s'
-                        % (file_name, line_num, message))
+                    error_message = f'{file_name} --> Line {line_num}: {message}'
                     with self.subTest(class_name):
                         self.assertTrue(
                             class_name.endswith('Handler'), msg=error_message)
@@ -1363,7 +1359,7 @@ class SignUpTests(test_utils.GenericTestBase):
         during signup.
         """
         self.login('abc@example.com')
-        self.get_html_response(feconf.SIGNUP_URL + '?return_url=/')
+        self.get_html_response(f'{feconf.SIGNUP_URL}?return_url=/')
         csrf_token = self.get_new_csrf_token()
 
         response = self.get_html_response('/about', expected_status_int=302)
@@ -1385,7 +1381,7 @@ class SignUpTests(test_utils.GenericTestBase):
         after signup.
         """
         self.login('abc@example.com')
-        self.get_html_response(feconf.SIGNUP_URL + '?return_url=/')
+        self.get_html_response(f'{feconf.SIGNUP_URL}?return_url=/')
         csrf_token = self.get_new_csrf_token()
         self.post_json(
             feconf.SIGNUP_DATA_URL, {
@@ -1405,7 +1401,7 @@ class SignUpTests(test_utils.GenericTestBase):
         using invalid CSRF token.
         """
         self.login('abc@example.com')
-        self.get_html_response(feconf.SIGNUP_URL + '?return_url=/')
+        self.get_html_response(f'{feconf.SIGNUP_URL}?return_url=/')
 
         response = self.post_json(
             feconf.SIGNUP_DATA_URL, {
@@ -1511,10 +1507,8 @@ class OppiaMLVMHandlerTests(test_utils.GenericTestBase):
         ))
 
     def test_that_incorrect_derived_class_raises_exception(self) -> None:
-        payload = {}
-        payload['vm_id'] = feconf.DEFAULT_VM_ID
         secret = feconf.DEFAULT_VM_SHARED_SECRET
-        payload['message'] = json.dumps('message')
+        payload = {'vm_id': feconf.DEFAULT_VM_ID, 'message': json.dumps('message')}
         payload['signature'] = classifier_services.generate_signature(
             secret.encode('utf-8'),
             payload['message'].encode('utf-8'),
@@ -1525,10 +1519,8 @@ class OppiaMLVMHandlerTests(test_utils.GenericTestBase):
                 '/incorrectmock', payload, expected_status_int=500)
 
     def test_that_correct_derived_class_does_not_raise_exception(self) -> None:
-        payload = {}
-        payload['vm_id'] = feconf.DEFAULT_VM_ID
         secret = feconf.DEFAULT_VM_SHARED_SECRET
-        payload['message'] = json.dumps('message')
+        payload = {'vm_id': feconf.DEFAULT_VM_ID, 'message': json.dumps('message')}
         payload['signature'] = classifier_services.generate_signature(
             secret.encode('utf-8'),
             payload['message'].encode('utf-8'),
@@ -1582,7 +1574,7 @@ class SchemaValidationIntegrationTests(test_utils.GenericTestBase):
             handler_has_schemas = (schema_written_for_request_methods and
                 schema_written_for_url_path_args)
 
-            if handler_has_schemas is False:
+            if not handler_has_schemas:
                 list_of_handlers_which_need_schemas.append(handler_class_name)
 
         error_msg = (
@@ -1627,12 +1619,11 @@ class SchemaValidationIntegrationTests(test_utils.GenericTestBase):
                 url_path_arg_names.append(url_path_arg_name)
             schema_keys = handler.URL_PATH_ARGS_SCHEMAS.keys()
 
-            missing_schema_keys = set(url_path_arg_names) - set(schema_keys)
-            if missing_schema_keys:
+            if missing_schema_keys := set(url_path_arg_names) - set(schema_keys):
                 handlers_with_missing_url_schema_keys.append(handler_class_name)
                 self.log_line(
-                    'Missing keys in URL_PATH_ARGS_SCHEMAS for %s: %s.' % (
-                        handler_class_name, ', '.join(missing_schema_keys)))
+                    f"Missing keys in URL_PATH_ARGS_SCHEMAS for {handler_class_name}: {', '.join(missing_schema_keys)}."
+                )
 
         error_msg = (
             'Missing schema keys in URL_PATH_ARGS_SCHEMAS for [ %s ] classes.'
@@ -1672,14 +1663,14 @@ class SchemaValidationIntegrationTests(test_utils.GenericTestBase):
                 handler_request_methods.append('DELETE')
             methods_defined_in_schema = handler.HANDLER_ARGS_SCHEMAS.keys()
 
-            missing_schema_keys = (
-                set(handler_request_methods) - set(methods_defined_in_schema))
-            if missing_schema_keys:
+            if missing_schema_keys := (
+                set(handler_request_methods) - set(methods_defined_in_schema)
+            ):
                 handlers_with_missing_request_schema_keys.append(
                     handler_class_name)
                 self.log_line(
-                    'Missing keys in HANDLER_ARGS_SCHEMAS for %s: %s.' % (
-                        handler_class_name, ', '.join(missing_schema_keys)))
+                    f"Missing keys in HANDLER_ARGS_SCHEMAS for {handler_class_name}: {', '.join(missing_schema_keys)}."
+                )
 
         error_msg = (
             'Missing schema keys in HANDLER_ARGS_SCHEMAS for [ %s ] classes.'
@@ -1694,10 +1685,10 @@ class SchemaValidationIntegrationTests(test_utils.GenericTestBase):
         """This test checks whether the default_value provided in schema
         conforms with the rest of the schema.
         """
-        handlers_with_non_conforming_default_schemas = []
         list_of_routes_which_need_schemas = (
             self._get_list_of_routes_which_need_schemas())
 
+        handlers_with_non_conforming_default_schemas = []
         for route in list_of_routes_which_need_schemas:
             handler = route.handler
 
@@ -1725,8 +1716,8 @@ class SchemaValidationIntegrationTests(test_utils.GenericTestBase):
                     if len(errors) == 0:
                         continue
                     self.log_line(
-                        'Handler: %s, argument: %s, default_value '
-                            'validation failed.' % (handler_class_name, arg))
+                        f'Handler: {handler_class_name}, argument: {arg}, default_value validation failed.'
+                    )
 
                     if (handler_class_name not in
                             handlers_with_non_conforming_default_schemas):
@@ -1750,12 +1741,12 @@ class SchemaValidationIntegrationTests(test_utils.GenericTestBase):
         only contains handler class names which require schemas.
         """
 
-        list_of_handlers_to_be_removed = []
         handler_names_which_require_schemas = (
         handler_schema_constants.HANDLER_CLASS_NAMES_WHICH_STILL_NEED_SCHEMAS)
         list_of_routes_which_need_schemas = (
             self._get_list_of_routes_which_need_schemas())
 
+        list_of_handlers_to_be_removed = []
         for route in list_of_routes_which_need_schemas:
             handler = route.handler
 
@@ -1773,10 +1764,7 @@ class SchemaValidationIntegrationTests(test_utils.GenericTestBase):
             if handler_has_schemas:
                 list_of_handlers_to_be_removed.append(handler_class_name)
 
-        error_msg = (
-            'Handlers to be removed from schema requiring list in '
-            'handler_schema_constants file: [ %s ].' % (
-                ', '.join(list_of_handlers_to_be_removed)))
+        error_msg = f"Handlers to be removed from schema requiring list in handler_schema_constants file: [ {', '.join(list_of_handlers_to_be_removed)} ]."
 
         self.assertEqual(list_of_handlers_to_be_removed, [], error_msg)
 
@@ -1856,8 +1844,8 @@ class SchemaValidationUrlArgsTests(test_utils.GenericTestBase):
         self.login(self.OWNER_EMAIL)
         with self.swap(self, 'testapp', self.mock_testapp1):
             response = self.get_json(
-                '/mock_play_exploration/%s' % self.exp_id,
-                    expected_status_int=400)
+                f'/mock_play_exploration/{self.exp_id}', expected_status_int=400
+            )
             error_msg = (
                 'At \'http://localhost/mock_play_exploration/exp_id\' '
                 'these errors are happening:\n'
@@ -1870,8 +1858,8 @@ class SchemaValidationUrlArgsTests(test_utils.GenericTestBase):
         self.login(self.OWNER_EMAIL)
         with self.swap(self, 'testapp', self.mock_testapp2):
             response = self.get_json(
-                '/mock_play_exploration/%s' % self.exp_id,
-                    expected_status_int=200)
+                f'/mock_play_exploration/{self.exp_id}', expected_status_int=200
+            )
         self.logout()
 
     def test_cannot_access_exploration_with_missing_schema(self) -> None:
@@ -1881,8 +1869,9 @@ class SchemaValidationUrlArgsTests(test_utils.GenericTestBase):
             'MockHandlerWithMissingUrlPathSchema handler class.')
 
         with self.swap(self, 'testapp', self.mock_testapp3):
-            response = self.get_json('/mock_play_exploration/%s' % self.exp_id,
-                expected_status_int=500)
+            response = self.get_json(
+                f'/mock_play_exploration/{self.exp_id}', expected_status_int=500
+            )
             self.assertEqual(response['error'], error_msg)
         self.logout()
 
@@ -1989,8 +1978,8 @@ class SchemaValidationRequestArgsTests(test_utils.GenericTestBase):
             exploration_id = self.normalized_request['exploration_id']
             if exploration_id != 'random_exp_id':
                 raise self.InvalidInputException(
-                    'Expected exploration_id to be random_exp_id received %s'
-                    % exploration_id)
+                    f'Expected exploration_id to be random_exp_id received {exploration_id}'
+                )
             return self.render_json({'exploration_id': exploration_id})
 
     class MockHandlerWithDefaultPutSchema(
@@ -2022,8 +2011,8 @@ class SchemaValidationRequestArgsTests(test_utils.GenericTestBase):
             exploration_id = self.normalized_payload['exploration_id']
             if exploration_id != 'random_exp_id':
                 raise self.InvalidInputException(
-                    'Expected exploration_id to be random_exp_id received %s'
-                    % exploration_id)
+                    f'Expected exploration_id to be random_exp_id received {exploration_id}'
+                )
             self.render_json({'exploration_id': exploration_id})
 
     def setUp(self) -> None:
@@ -2057,8 +2046,9 @@ class SchemaValidationRequestArgsTests(test_utils.GenericTestBase):
         self.login(self.OWNER_EMAIL)
         with self.swap(self, 'testapp', self.mock_testapp1):
             response = self.get_json(
-                '/mock_play_exploration?exploration_id=%s' % self.exp_id,
-                    expected_status_int=400)
+                f'/mock_play_exploration?exploration_id={self.exp_id}',
+                expected_status_int=400,
+            )
             error_msg = (
                 'Schema validation for \'exploration_id\' failed: Could not '
                 'convert str to int: %s' % self.exp_id)
@@ -2073,8 +2063,9 @@ class SchemaValidationRequestArgsTests(test_utils.GenericTestBase):
 
         with self.swap(self, 'testapp', self.mock_testapp2):
             response = self.get_json(
-                '/mock_play_exploration?exploration_id=%s' % self.exp_id,
-                    expected_status_int=500)
+                f'/mock_play_exploration?exploration_id={self.exp_id}',
+                expected_status_int=500,
+            )
             self.assertEqual(response['error'], error_msg)
         self.logout()
 
@@ -2438,12 +2429,12 @@ class UrlPathNormalizationTest(test_utils.GenericTestBase):
         def get(self, mock_list: List[str], mock_int: int) -> None:  # type: ignore[override]
             if not isinstance(mock_list, list):
                 raise self.InvalidInputException(
-                    'Expected arg mock_list to be a list. Was type %s' %
-                    type(mock_list))
+                    f'Expected arg mock_list to be a list. Was type {type(mock_list)}'
+                )
             if not isinstance(mock_int, int):
                 raise self.InvalidInputException(
-                    'Expected arg mock_int to be a int. Was type %s' %
-                    type(mock_int))
+                    f'Expected arg mock_int to be a int. Was type {type(mock_int)}'
+                )
             self.render_json({'mock_list': mock_list, 'mock_int': mock_int})
 
     def setUp(self) -> None:
@@ -2460,8 +2451,9 @@ class UrlPathNormalizationTest(test_utils.GenericTestBase):
 
         with self.swap(self, 'testapp', self.testapp):
             self.get_json(
-                '/mock_normalization/%s/%s' % (int_string, list_string),
-                expected_status_int=200)
+                f'/mock_normalization/{int_string}/{list_string}',
+                expected_status_int=200,
+            )
 
 
 class RaiseErrorOnGetTest(test_utils.GenericTestBase):

@@ -48,16 +48,18 @@ class CollectionViewerPermissionsTests(test_utils.GenericTestBase):
         self
     ) -> None:
         self.get_html_response(
-            '%s/%s' % (feconf.COLLECTION_URL_PREFIX, self.COLLECTION_ID),
-            expected_status_int=404)
+            f'{feconf.COLLECTION_URL_PREFIX}/{self.COLLECTION_ID}',
+            expected_status_int=404,
+        )
 
     def test_unpublished_collections_are_invisible_to_unconnected_users(
         self
     ) -> None:
         self.login(self.NEW_USER_EMAIL)
         self.get_html_response(
-            '%s/%s' % (feconf.COLLECTION_URL_PREFIX, self.COLLECTION_ID),
-            expected_status_int=404)
+            f'{feconf.COLLECTION_URL_PREFIX}/{self.COLLECTION_ID}',
+            expected_status_int=404,
+        )
         self.logout()
 
     def test_unpublished_collections_are_invisible_to_other_editors(
@@ -69,24 +71,23 @@ class CollectionViewerPermissionsTests(test_utils.GenericTestBase):
 
         self.login(self.OTHER_EDITOR_EMAIL)
         self.get_html_response(
-            '%s/%s' % (feconf.COLLECTION_URL_PREFIX, self.COLLECTION_ID),
-            expected_status_int=404)
+            f'{feconf.COLLECTION_URL_PREFIX}/{self.COLLECTION_ID}',
+            expected_status_int=404,
+        )
         self.logout()
 
     def test_unpublished_collections_are_visible_to_their_editors(
         self
     ) -> None:
         self.login(self.EDITOR_EMAIL)
-        self.get_html_response(
-            '%s/%s' % (feconf.COLLECTION_URL_PREFIX, self.COLLECTION_ID))
+        self.get_html_response(f'{feconf.COLLECTION_URL_PREFIX}/{self.COLLECTION_ID}')
         self.logout()
 
     def test_unpublished_collections_are_visible_to_admins(self) -> None:
         self.signup(self.MODERATOR_EMAIL, self.MODERATOR_USERNAME)
         self.set_moderators([self.MODERATOR_USERNAME])
         self.login(self.MODERATOR_EMAIL)
-        self.get_html_response(
-            '%s/%s' % (feconf.COLLECTION_URL_PREFIX, self.COLLECTION_ID))
+        self.get_html_response(f'{feconf.COLLECTION_URL_PREFIX}/{self.COLLECTION_ID}')
         self.logout()
 
     def test_published_collections_are_visible_to_logged_out_users(
@@ -94,8 +95,7 @@ class CollectionViewerPermissionsTests(test_utils.GenericTestBase):
     ) -> None:
         rights_manager.publish_collection(self.editor, self.COLLECTION_ID)
 
-        self.get_html_response(
-            '%s/%s' % (feconf.COLLECTION_URL_PREFIX, self.COLLECTION_ID))
+        self.get_html_response(f'{feconf.COLLECTION_URL_PREFIX}/{self.COLLECTION_ID}')
 
     def test_published_collections_are_visible_to_logged_in_users(
         self
@@ -103,14 +103,13 @@ class CollectionViewerPermissionsTests(test_utils.GenericTestBase):
         rights_manager.publish_collection(self.editor, self.COLLECTION_ID)
 
         self.login(self.NEW_USER_EMAIL)
-        self.get_html_response(
-            '%s/%s' % (feconf.COLLECTION_URL_PREFIX, self.COLLECTION_ID))
+        self.get_html_response(f'{feconf.COLLECTION_URL_PREFIX}/{self.COLLECTION_ID}')
 
     def test_invalid_collection_error(self) -> None:
         self.login(self.EDITOR_EMAIL)
         self.get_html_response(
-            '%s/%s' % (feconf.COLLECTION_URL_PREFIX, 'none'),
-            expected_status_int=404)
+            f'{feconf.COLLECTION_URL_PREFIX}/none', expected_status_int=404
+        )
         self.logout()
 
 
@@ -132,12 +131,11 @@ class CollectionViewerControllerEndToEndTests(test_utils.GenericTestBase):
 
         # Request invalid collection from data handler.
         response_dict = self.get_json(
-            '%s/1' % feconf.COLLECTION_DATA_URL_PREFIX,
-            expected_status_int=404)
+            f'{feconf.COLLECTION_DATA_URL_PREFIX}/1', expected_status_int=404
+        )
 
         # Request the collection from the data handler.
-        response_dict = self.get_json(
-            '%s/0' % feconf.COLLECTION_DATA_URL_PREFIX)
+        response_dict = self.get_json(f'{feconf.COLLECTION_DATA_URL_PREFIX}/0')
         collection_dict = response_dict['collection']
 
         # Verify the collection was properly loaded.
@@ -161,8 +159,7 @@ class CollectionViewerControllerEndToEndTests(test_utils.GenericTestBase):
         # suggested to the learner.
         collection_services.record_played_exploration_in_collection_context(
             self.viewer_id, '0', '19')
-        response_dict = self.get_json(
-            '%s/0' % feconf.COLLECTION_DATA_URL_PREFIX)
+        response_dict = self.get_json(f'{feconf.COLLECTION_DATA_URL_PREFIX}/0')
         collection_dict = response_dict['collection']
 
         playthrough_dict = collection_dict['playthrough_dict']
@@ -173,8 +170,7 @@ class CollectionViewerControllerEndToEndTests(test_utils.GenericTestBase):
         # Completing the next exploration results in a third suggested exp.
         collection_services.record_played_exploration_in_collection_context(
             self.viewer_id, '0', '20')
-        response_dict = self.get_json(
-            '%s/0' % feconf.COLLECTION_DATA_URL_PREFIX)
+        response_dict = self.get_json(f'{feconf.COLLECTION_DATA_URL_PREFIX}/0')
         collection_dict = response_dict['collection']
 
         playthrough_dict = collection_dict['playthrough_dict']
@@ -187,8 +183,7 @@ class CollectionViewerControllerEndToEndTests(test_utils.GenericTestBase):
         # suggested exp.
         collection_services.record_played_exploration_in_collection_context(
             self.viewer_id, '0', '21')
-        response_dict = self.get_json(
-            '%s/0' % feconf.COLLECTION_DATA_URL_PREFIX)
+        response_dict = self.get_json(f'{feconf.COLLECTION_DATA_URL_PREFIX}/0')
         collection_dict = response_dict['collection']
 
         playthrough_dict = collection_dict['playthrough_dict']
@@ -200,8 +195,7 @@ class CollectionViewerControllerEndToEndTests(test_utils.GenericTestBase):
         # Completing the final exploration should result in no new suggestions.
         collection_services.record_played_exploration_in_collection_context(
             self.viewer_id, '0', '0')
-        response_dict = self.get_json(
-            '%s/0' % feconf.COLLECTION_DATA_URL_PREFIX)
+        response_dict = self.get_json(f'{feconf.COLLECTION_DATA_URL_PREFIX}/0')
         collection_dict = response_dict['collection']
 
         playthrough_dict = collection_dict['playthrough_dict']

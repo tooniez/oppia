@@ -92,8 +92,9 @@ class ReaderPermissionsTest(test_utils.GenericTestBase):
         self
     ) -> None:
         self.get_html_response(
-            '%s/%s' % (feconf.EXPLORATION_URL_PREFIX, self.EXP_ID),
-            expected_status_int=404)
+            f'{feconf.EXPLORATION_URL_PREFIX}/{self.EXP_ID}',
+            expected_status_int=404,
+        )
 
     def test_unpublished_explorations_are_invisible_to_unconnected_users(
         self
@@ -101,8 +102,9 @@ class ReaderPermissionsTest(test_utils.GenericTestBase):
         self.signup(self.VIEWER_EMAIL, self.VIEWER_USERNAME)
         self.login(self.VIEWER_EMAIL)
         self.get_html_response(
-            '%s/%s' % (feconf.EXPLORATION_URL_PREFIX, self.EXP_ID),
-            expected_status_int=404)
+            f'{feconf.EXPLORATION_URL_PREFIX}/{self.EXP_ID}',
+            expected_status_int=404,
+        )
         self.logout()
 
     def test_unpublished_explorations_are_invisible_to_other_editors(
@@ -118,24 +120,23 @@ class ReaderPermissionsTest(test_utils.GenericTestBase):
 
         self.login(other_editor_email)
         self.get_html_response(
-            '%s/%s' % (feconf.EXPLORATION_URL_PREFIX, self.EXP_ID),
-            expected_status_int=404)
+            f'{feconf.EXPLORATION_URL_PREFIX}/{self.EXP_ID}',
+            expected_status_int=404,
+        )
         self.logout()
 
     def test_unpublished_explorations_are_visible_to_their_editors(
         self
     ) -> None:
         self.login(self.EDITOR_EMAIL)
-        self.get_html_response(
-            '%s/%s' % (feconf.EXPLORATION_URL_PREFIX, self.EXP_ID))
+        self.get_html_response(f'{feconf.EXPLORATION_URL_PREFIX}/{self.EXP_ID}')
         self.logout()
 
     def test_unpublished_explorations_are_visible_to_moderator(self) -> None:
         self.signup(self.MODERATOR_EMAIL, self.MODERATOR_USERNAME)
         self.set_moderators([self.MODERATOR_USERNAME])
         self.login(self.MODERATOR_EMAIL)
-        self.get_html_response(
-            '%s/%s' % (feconf.EXPLORATION_URL_PREFIX, self.EXP_ID))
+        self.get_html_response(f'{feconf.EXPLORATION_URL_PREFIX}/{self.EXP_ID}')
         self.logout()
 
     def test_published_explorations_are_visible_to_logged_out_users(
@@ -143,8 +144,7 @@ class ReaderPermissionsTest(test_utils.GenericTestBase):
     ) -> None:
         rights_manager.publish_exploration(self.editor, self.EXP_ID)
 
-        self.get_html_response(
-            '%s/%s' % (feconf.EXPLORATION_URL_PREFIX, self.EXP_ID))
+        self.get_html_response(f'{feconf.EXPLORATION_URL_PREFIX}/{self.EXP_ID}')
 
     def test_published_explorations_are_visible_to_logged_in_users(
         self
@@ -153,23 +153,22 @@ class ReaderPermissionsTest(test_utils.GenericTestBase):
 
         self.signup(self.VIEWER_EMAIL, self.VIEWER_USERNAME)
         self.login(self.VIEWER_EMAIL)
-        self.get_html_response(
-            '%s/%s' % (feconf.EXPLORATION_URL_PREFIX, self.EXP_ID))
+        self.get_html_response(f'{feconf.EXPLORATION_URL_PREFIX}/{self.EXP_ID}')
 
     def test_exploration_page_with_iframed_redirects(self) -> None:
         self.login(self.EDITOR_EMAIL)
 
         exp_version = self.exploration.version
         response = self.get_html_response(
-            '%s/%s' % (feconf.EXPLORATION_URL_PREFIX, self.EXP_ID), params={
-                'parent': True,
-                'iframed': True,
-                'v': exp_version
-            }, expected_status_int=302
+            f'{feconf.EXPLORATION_URL_PREFIX}/{self.EXP_ID}',
+            params={'parent': True, 'iframed': True, 'v': exp_version},
+            expected_status_int=302,
         )
         self.assertTrue(
             response.headers['Location'].endswith(
-                '/embed/exploration/%s?v=%s' % (self.EXP_ID, exp_version)))
+                f'/embed/exploration/{self.EXP_ID}?v={exp_version}'
+            )
+        )
 
         self.logout()
 
@@ -179,10 +178,9 @@ class ReaderPermissionsTest(test_utils.GenericTestBase):
         self.login(self.EDITOR_EMAIL)
 
         self.get_html_response(
-            '%s/%s' % (feconf.EXPLORATION_URL_PREFIX, self.EXP_ID), params={
-                'v': 10,
-                'parent': True
-            }, expected_status_int=404
+            f'{feconf.EXPLORATION_URL_PREFIX}/{self.EXP_ID}',
+            params={'v': 10, 'parent': True},
+            expected_status_int=404,
         )
 
         self.logout()
@@ -203,16 +201,17 @@ class FeedbackIntegrationTest(test_utils.GenericTestBase):
         # Viewer opens exploration.
         self.login(self.VIEWER_EMAIL)
         exploration_dict = self.get_json(
-            '%s/%s' % (feconf.EXPLORATION_INIT_URL_PREFIX, exp_id))
+            f'{feconf.EXPLORATION_INIT_URL_PREFIX}/{exp_id}'
+        )
         state_name_1 = exploration_dict['exploration']['init_state_name']
 
         # Viewer gives 1st feedback.
         self.post_json(
-            '/explorehandler/give_feedback/%s' % exp_id,
+            f'/explorehandler/give_feedback/{exp_id}',
             {
                 'state_name': state_name_1,
                 'feedback': 'This is a feedback message.',
-            }
+            },
         )
 
         self.logout()
@@ -292,21 +291,21 @@ class ExplorationPretestsUnitTest(test_utils.GenericTestBase):
         # Call the handler.
         with self.swap(feconf, 'NUM_PRETEST_QUESTIONS', 1):
             json_response_1 = self.get_json(
-                '%s/%s?story_url_fragment=title' % (
-                    feconf.EXPLORATION_PRETESTS_URL_PREFIX, exp_id))
+                f'{feconf.EXPLORATION_PRETESTS_URL_PREFIX}/{exp_id}?story_url_fragment=title'
+            )
         self.assertTrue(
             json_response_1['pretest_question_dicts'][0]['id'] in
             [question_id, question_id_2])
 
         self.get_json(
-            '%s/%s?story_url_fragment=title' % (
-                feconf.EXPLORATION_PRETESTS_URL_PREFIX, exp_id_2),
-            expected_status_int=400)
+            f'{feconf.EXPLORATION_PRETESTS_URL_PREFIX}/{exp_id_2}?story_url_fragment=title',
+            expected_status_int=400,
+        )
 
         self.get_json(
-            '%s/%s?story_url_fragment=invalid-story' % (
-                feconf.EXPLORATION_PRETESTS_URL_PREFIX, exp_id_2),
-            expected_status_int=400)
+            f'{feconf.EXPLORATION_PRETESTS_URL_PREFIX}/{exp_id_2}?story_url_fragment=invalid-story',
+            expected_status_int=400,
+        )
 
     def test_cannot_perform_exploration_pretests_without_prerequisite_skill_ids(
         self
@@ -366,14 +365,13 @@ class ExplorationPretestsUnitTest(test_utils.GenericTestBase):
         # Call the handler.
         with self.swap(feconf, 'NUM_PRETEST_QUESTIONS', 1):
             with self.swap_to_always_return(
-                story_domain.Story,
-                'get_prerequisite_skill_ids_for_exp_id',
-                None
-            ):
+                        story_domain.Story,
+                        'get_prerequisite_skill_ids_for_exp_id',
+                        None
+                    ):
                 json_response = self.get_json(
-                    '%s/%s?story_url_fragment=title' % (
-                        feconf.EXPLORATION_PRETESTS_URL_PREFIX, exp_id),
-                    expected_status_int=500
+                    f'{feconf.EXPLORATION_PRETESTS_URL_PREFIX}/{exp_id}?story_url_fragment=title',
+                    expected_status_int=500,
                 )
         self.assertEqual(
             json_response['error'],
@@ -416,8 +414,7 @@ class QuestionsUnitTest(test_utils.GenericTestBase):
 
     def test_questions_are_returned_successfully(self) -> None:
         # Call the handler.
-        url = '%s?question_count=%s&skill_ids=%s&fetch_by_difficulty=%s' % (
-            feconf.QUESTIONS_URL_PREFIX, '1', self.skill_id, 'false')
+        url = f'{feconf.QUESTIONS_URL_PREFIX}?question_count=1&skill_ids={self.skill_id}&fetch_by_difficulty=false'
         json_response_1 = self.get_json(url)
         self.assertEqual(len(json_response_1['question_dicts']), 1)
 
@@ -425,8 +422,7 @@ class QuestionsUnitTest(test_utils.GenericTestBase):
         self
     ) -> None:
         # Call the handler.
-        url = '%s?question_count=%s&skill_ids=%s&fetch_by_difficulty=%s' % (
-            feconf.QUESTIONS_URL_PREFIX, '5', self.skill_id, 'true')
+        url = f'{feconf.QUESTIONS_URL_PREFIX}?question_count=5&skill_ids={self.skill_id}&fetch_by_difficulty=true'
         json_response = self.get_json(url)
         self.assertEqual(len(json_response['question_dicts']), 2)
 
@@ -440,8 +436,7 @@ class QuestionsUnitTest(test_utils.GenericTestBase):
             self._create_valid_question_data('ABC'), [self.skill_id])
         question_services.create_new_question_skill_link(
             self.editor_id, question_id_3, skill_id_2, 0.5)
-        url = '%s?question_count=%s&skill_ids=%s,%s&fetch_by_difficulty=%s' % (
-            feconf.QUESTIONS_URL_PREFIX, '3', self.skill_id, skill_id_2, 'true')
+        url = f'{feconf.QUESTIONS_URL_PREFIX}?question_count=3&skill_ids={self.skill_id},{skill_id_2}&fetch_by_difficulty=true'
         json_response = self.get_json(url)
         self.assertEqual(len(json_response['question_dicts']), 3)
         question_ids = [data['id'] for data in json_response['question_dicts']]
@@ -476,12 +471,7 @@ class QuestionsUnitTest(test_utils.GenericTestBase):
         # Removing the last comma of the string.
         skill_ids_for_url = skill_ids_for_url[:-1]
 
-        url = '%s?question_count=%s&skill_ids=%s&fetch_by_difficulty=%s' % (
-            feconf.QUESTIONS_URL_PREFIX,
-            feconf.MAX_QUESTIONS_FETCHABLE_AT_ONE_TIME,
-            skill_ids_for_url,
-            'true'
-        )
+        url = f'{feconf.QUESTIONS_URL_PREFIX}?question_count={feconf.MAX_QUESTIONS_FETCHABLE_AT_ONE_TIME}&skill_ids={skill_ids_for_url}&fetch_by_difficulty=true'
         json_response = self.get_json(url)
         self.assertEqual(
             len(json_response['question_dicts']),
@@ -489,8 +479,7 @@ class QuestionsUnitTest(test_utils.GenericTestBase):
 
     def test_invalid_skill_id_returns_no_questions(self) -> None:
         # Call the handler.
-        url = '%s?question_count=%s&skill_ids=%s&fetch_by_difficulty=%s' % (
-            feconf.QUESTIONS_URL_PREFIX, '1', 'invalid_skill_id', 'true')
+        url = f'{feconf.QUESTIONS_URL_PREFIX}?question_count=1&skill_ids=invalid_skill_id&fetch_by_difficulty=true'
         json_response = self.get_json(url, expected_status_int=400)
         self.assertEqual(
             json_response['error'],
@@ -499,8 +488,7 @@ class QuestionsUnitTest(test_utils.GenericTestBase):
 
     def test_question_count_zero_raises_invalid_input_exception(self) -> None:
         # Call the handler.
-        url = '%s?question_count=%s&skill_ids=%s&fetch_by_difficulty=%s' % (
-            feconf.QUESTIONS_URL_PREFIX, '0', self.skill_id, 'true')
+        url = f'{feconf.QUESTIONS_URL_PREFIX}?question_count=0&skill_ids={self.skill_id}&fetch_by_difficulty=true'
         self.get_json(url, expected_status_int=400)
 
     def test_invalid_fetch_by_difficulty_raises_invalid_input_exception(
@@ -544,7 +532,7 @@ class RatingsIntegrationTests(test_utils.GenericTestBase):
         csrf_token = self.get_new_csrf_token()
 
         # User checks rating.
-        ratings = self.get_json('/explorehandler/rating/%s' % self.EXP_ID)
+        ratings = self.get_json(f'/explorehandler/rating/{self.EXP_ID}')
         self.assertEqual(ratings['user_rating'], None)
         self.assertEqual(
             ratings['overall_ratings'],
@@ -552,11 +540,11 @@ class RatingsIntegrationTests(test_utils.GenericTestBase):
 
         # User rates and checks rating.
         self.put_json(
-            '/explorehandler/rating/%s' % self.EXP_ID, {
-                'user_rating': 2
-            }, csrf_token=csrf_token
+            f'/explorehandler/rating/{self.EXP_ID}',
+            {'user_rating': 2},
+            csrf_token=csrf_token,
         )
-        ratings = self.get_json('/explorehandler/rating/%s' % self.EXP_ID)
+        ratings = self.get_json(f'/explorehandler/rating/{self.EXP_ID}')
         self.assertEqual(ratings['user_rating'], 2)
         self.assertEqual(
             ratings['overall_ratings'],
@@ -565,11 +553,11 @@ class RatingsIntegrationTests(test_utils.GenericTestBase):
         # User re-rates and checks rating.
         self.login('user@example.com')
         self.put_json(
-            '/explorehandler/rating/%s' % self.EXP_ID, {
-                'user_rating': 5
-            }, csrf_token=csrf_token
+            f'/explorehandler/rating/{self.EXP_ID}',
+            {'user_rating': 5},
+            csrf_token=csrf_token,
         )
-        ratings = self.get_json('/explorehandler/rating/%s' % self.EXP_ID)
+        ratings = self.get_json(f'/explorehandler/rating/{self.EXP_ID}')
         self.assertEqual(ratings['user_rating'], 5)
         self.assertEqual(
             ratings['overall_ratings'],
@@ -585,16 +573,16 @@ class RatingsIntegrationTests(test_utils.GenericTestBase):
         csrf_token = self.get_new_csrf_token()
         self.logout()
 
-        ratings = self.get_json('/explorehandler/rating/%s' % self.EXP_ID)
+        ratings = self.get_json(f'/explorehandler/rating/{self.EXP_ID}')
         self.assertEqual(ratings['user_rating'], None)
         self.assertEqual(
             ratings['overall_ratings'],
             {'1': 0, '2': 0, '3': 0, '4': 0, '5': 0})
         self.put_json(
-            '/explorehandler/rating/%s' % self.EXP_ID, {
-                'user_rating': 1
-            }, csrf_token=csrf_token,
-            expected_status_int=401
+            f'/explorehandler/rating/{self.EXP_ID}',
+            {'user_rating': 1},
+            csrf_token=csrf_token,
+            expected_status_int=401,
         )
 
     def test_ratings_by_different_users(self) -> None:
@@ -606,22 +594,22 @@ class RatingsIntegrationTests(test_utils.GenericTestBase):
         self.login('a@example.com')
         csrf_token = self.get_new_csrf_token()
         self.put_json(
-            '/explorehandler/rating/%s' % self.EXP_ID, {
-                'user_rating': 4
-            }, csrf_token=csrf_token
+            f'/explorehandler/rating/{self.EXP_ID}',
+            {'user_rating': 4},
+            csrf_token=csrf_token,
         )
         self.logout()
 
         self.login('b@example.com')
         csrf_token = self.get_new_csrf_token()
-        ratings = self.get_json('/explorehandler/rating/%s' % self.EXP_ID)
+        ratings = self.get_json(f'/explorehandler/rating/{self.EXP_ID}')
         self.assertEqual(ratings['user_rating'], None)
         self.put_json(
-            '/explorehandler/rating/%s' % self.EXP_ID, {
-                'user_rating': 4
-            }, csrf_token=csrf_token
+            f'/explorehandler/rating/{self.EXP_ID}',
+            {'user_rating': 4},
+            csrf_token=csrf_token,
         )
-        ratings = self.get_json('/explorehandler/rating/%s' % self.EXP_ID)
+        ratings = self.get_json(f'/explorehandler/rating/{self.EXP_ID}')
         self.assertEqual(ratings['user_rating'], 4)
         self.assertEqual(
             ratings['overall_ratings'],
@@ -681,12 +669,13 @@ class RecommendationsHandlerTests(test_utils.EmailTestBase):
     ) -> List[str]:
         """Gets the recommended exploration ids from the summaries."""
         collection_id_param = (
-            '&collection_id=%s' % collection_id
-            if collection_id is not None else '')
+            f'&collection_id={collection_id}' if collection_id is not None else ''
+        )
         include_recommendations_param = (
-            '&include_system_recommendations=%s' % (
-                include_system_recommendations)
-            if include_system_recommendations is not None else '')
+            f'&include_system_recommendations={include_system_recommendations}'
+            if include_system_recommendations is not None
+            else ''
+        )
         recommendations_url = (
             '/explorehandler/recommendations/%s?'
             'author_recommended_ids=%s%s%s' % (
@@ -1142,11 +1131,13 @@ class RecommendationsHandlerTests(test_utils.EmailTestBase):
         self
     ) -> None:
         self.get_json(
-            '/explorehandler/recommendations/%s' % self.EXP_ID_1, params={
+            f'/explorehandler/recommendations/{self.EXP_ID_1}',
+            params={
                 'collection_id': self.COL_ID,
                 'include_system_recommendations': True,
-                'author_recommended_ids': 'invalid_type'
-            }, expected_status_int=400
+                'author_recommended_ids': 'invalid_type',
+            },
+            expected_status_int=400,
         )
 
 
@@ -1195,9 +1186,12 @@ class FlagExplorationHandlerTests(test_utils.EmailTestBase):
         csrf_token = self.get_new_csrf_token()
 
         self.post_json(
-            '%s/%s' % (feconf.FLAG_EXPLORATION_URL_PREFIX, self.EXP_ID), {
+            f'{feconf.FLAG_EXPLORATION_URL_PREFIX}/{self.EXP_ID}',
+            {
                 'report_text': self.REPORT_TEXT,
-            }, csrf_token=csrf_token)
+            },
+            csrf_token=csrf_token,
+        )
 
         self.logout()
 
@@ -1248,10 +1242,13 @@ class FlagExplorationHandlerTests(test_utils.EmailTestBase):
 
         # Create report for exploration.
         self.post_json(
-            '%s/%s' % (feconf.FLAG_EXPLORATION_URL_PREFIX, self.EXP_ID), {
+            f'{feconf.FLAG_EXPLORATION_URL_PREFIX}/{self.EXP_ID}',
+            {
                 'report_text': self.REPORT_TEXT,
-            }, csrf_token=csrf_token,
-            expected_status_int=401)
+            },
+            csrf_token=csrf_token,
+            expected_status_int=401,
+        )
 
 
 class LearnerProgressTest(test_utils.GenericTestBase):
@@ -1392,8 +1389,10 @@ class LearnerProgressTest(test_utils.GenericTestBase):
         # When an exploration is completed but is not in the context of a
         # collection, it is just added to the completed explorations list.
         self.post_json(
-            '/explorehandler/exploration_complete_event/%s' % self.EXP_ID_0,
-            payload, csrf_token=csrf_token)
+            f'/explorehandler/exploration_complete_event/{self.EXP_ID_0}',
+            payload,
+            csrf_token=csrf_token,
+        )
         self.assertEqual(learner_progress_services.get_all_completed_exp_ids(
             self.user_id), [self.EXP_ID_0])
         self.assertEqual(
@@ -1402,8 +1401,10 @@ class LearnerProgressTest(test_utils.GenericTestBase):
 
         # Test another exploration.
         self.post_json(
-            '/explorehandler/exploration_complete_event/%s' % self.EXP_ID_1_0,
-            payload, csrf_token=csrf_token)
+            f'/explorehandler/exploration_complete_event/{self.EXP_ID_1_0}',
+            payload,
+            csrf_token=csrf_token,
+        )
         self.assertEqual(learner_progress_services.get_all_completed_exp_ids(
             self.user_id), [self.EXP_ID_0, self.EXP_ID_1_0])
         self.assertEqual(
@@ -1434,8 +1435,10 @@ class LearnerProgressTest(test_utils.GenericTestBase):
 
         # Here we test the case when the collection is partially completed.
         self.post_json(
-            '/explorehandler/exploration_complete_event/%s' % self.EXP_ID_1_0,
-            payload, csrf_token=csrf_token)
+            f'/explorehandler/exploration_complete_event/{self.EXP_ID_1_0}',
+            payload,
+            csrf_token=csrf_token,
+        )
         self.assertEqual(
             learner_progress_services.get_all_incomplete_collection_ids(
                 self.user_id), [self.COL_ID_1])
@@ -1444,8 +1447,10 @@ class LearnerProgressTest(test_utils.GenericTestBase):
 
         # Now we test the case when the collection is completed.
         self.post_json(
-            '/explorehandler/exploration_complete_event/%s' % self.EXP_ID_1_1,
-            payload, csrf_token=csrf_token)
+            f'/explorehandler/exploration_complete_event/{self.EXP_ID_1_1}',
+            payload,
+            csrf_token=csrf_token,
+        )
         self.assertEqual(
             learner_progress_services.get_all_incomplete_collection_ids(
                 self.user_id), [])
@@ -1470,8 +1475,11 @@ class LearnerProgressTest(test_utils.GenericTestBase):
         }
 
         response = self.post_json(
-            '/explorehandler/exploration_complete_event/%s' % self.EXP_ID_1_0,
-            payload, csrf_token=csrf_token, expected_status_int=400)
+            f'/explorehandler/exploration_complete_event/{self.EXP_ID_1_0}',
+            payload,
+            csrf_token=csrf_token,
+            expected_status_int=400,
+        )
         self.assertEqual(
             response['error'], 'Missing key in handler args: version.')
 
@@ -1491,16 +1499,20 @@ class LearnerProgressTest(test_utils.GenericTestBase):
 
         # Add the incomplete exploration id to the incomplete list.
         self.post_json(
-            '/explorehandler/exploration_maybe_leave_event/%s' % self.EXP_ID_0,
-            payload, csrf_token=csrf_token)
+            f'/explorehandler/exploration_maybe_leave_event/{self.EXP_ID_0}',
+            payload,
+            csrf_token=csrf_token,
+        )
         self.assertEqual(
             learner_progress_services.get_all_incomplete_exp_ids(
                 self.user_id), [self.EXP_ID_0])
 
         # Adding the exploration again has no effect.
         self.post_json(
-            '/explorehandler/exploration_maybe_leave_event/%s' % self.EXP_ID_0,
-            payload, csrf_token=csrf_token)
+            f'/explorehandler/exploration_maybe_leave_event/{self.EXP_ID_0}',
+            payload,
+            csrf_token=csrf_token,
+        )
         self.assertEqual(
             learner_progress_services.get_all_incomplete_exp_ids(
                 self.user_id), [self.EXP_ID_0])
@@ -1517,8 +1529,10 @@ class LearnerProgressTest(test_utils.GenericTestBase):
         # If the exploration is played in the context of a collection, the
         # collection is also added to the incomplete list.
         self.post_json(
-            '/explorehandler/exploration_maybe_leave_event/%s' % self.EXP_ID_1_0, # pylint: disable=line-too-long
-            payload, csrf_token=csrf_token)
+            f'/explorehandler/exploration_maybe_leave_event/{self.EXP_ID_1_0}',
+            payload,
+            csrf_token=csrf_token,
+        )
         self.assertEqual(
             learner_progress_services.get_all_incomplete_exp_ids(
                 self.user_id), [self.EXP_ID_0, self.EXP_ID_1_0])
@@ -1529,8 +1543,10 @@ class LearnerProgressTest(test_utils.GenericTestBase):
         # If the exploration is played in the context of a story, the
         # story is also added to the incomplete list.
         self.post_json(
-            '/explorehandler/exploration_maybe_leave_event/%s' % self.EXP_ID_2_0, # pylint: disable=line-too-long
-            payload, csrf_token=csrf_token)
+            f'/explorehandler/exploration_maybe_leave_event/{self.EXP_ID_2_0}',
+            payload,
+            csrf_token=csrf_token,
+        )
         self.assertEqual(learner_progress_services.get_all_incomplete_exp_ids(
             self.user_id), [self.EXP_ID_0, self.EXP_ID_1_0, self.EXP_ID_2_0])
         self.assertEqual(
@@ -1574,8 +1590,11 @@ class LearnerProgressTest(test_utils.GenericTestBase):
         }
 
         response = self.post_json(
-            '/explorehandler/exploration_maybe_leave_event/%s' % self.EXP_ID_0,
-            payload, csrf_token=csrf_token, expected_status_int=400)
+            f'/explorehandler/exploration_maybe_leave_event/{self.EXP_ID_0}',
+            payload,
+            csrf_token=csrf_token,
+            expected_status_int=400,
+        )
         error_msg = 'Missing key in handler args: version.'
         self.assertEqual(response['error'], error_msg)
 
@@ -1599,22 +1618,16 @@ class LearnerProgressTest(test_utils.GenericTestBase):
 
         # Remove one exploration.
         self.delete_json(
-            '%s/%s/%s' %
-            (
-                feconf.LEARNER_INCOMPLETE_ACTIVITY_DATA_URL,
-                constants.ACTIVITY_TYPE_EXPLORATION,
-                self.EXP_ID_0))
+            f'{feconf.LEARNER_INCOMPLETE_ACTIVITY_DATA_URL}/{constants.ACTIVITY_TYPE_EXPLORATION}/{self.EXP_ID_0}'
+        )
         self.assertEqual(
             learner_progress_services.get_all_incomplete_exp_ids(
                 self.user_id), [self.EXP_ID_1])
 
         # Remove another exploration.
         self.delete_json(
-            '%s/%s/%s' %
-            (
-                feconf.LEARNER_INCOMPLETE_ACTIVITY_DATA_URL,
-                constants.ACTIVITY_TYPE_EXPLORATION,
-                self.EXP_ID_1))
+            f'{feconf.LEARNER_INCOMPLETE_ACTIVITY_DATA_URL}/{constants.ACTIVITY_TYPE_EXPLORATION}/{self.EXP_ID_1}'
+        )
         self.assertEqual(
             learner_progress_services.get_all_incomplete_exp_ids(
                 self.user_id), [])
@@ -1635,44 +1648,32 @@ class LearnerProgressTest(test_utils.GenericTestBase):
 
         # Remove one collection.
         self.delete_json(
-            '%s/%s/%s' %
-            (
-                feconf.LEARNER_INCOMPLETE_ACTIVITY_DATA_URL,
-                constants.ACTIVITY_TYPE_COLLECTION,
-                self.COL_ID_0))
+            f'{feconf.LEARNER_INCOMPLETE_ACTIVITY_DATA_URL}/{constants.ACTIVITY_TYPE_COLLECTION}/{self.COL_ID_0}'
+        )
         self.assertEqual(
             learner_progress_services.get_all_incomplete_collection_ids(
                 self.user_id), [self.COL_ID_1])
 
         # Remove another collection.
         self.delete_json(
-            '%s/%s/%s' %
-            (
-                feconf.LEARNER_INCOMPLETE_ACTIVITY_DATA_URL,
-                constants.ACTIVITY_TYPE_COLLECTION,
-                self.COL_ID_1))
+            f'{feconf.LEARNER_INCOMPLETE_ACTIVITY_DATA_URL}/{constants.ACTIVITY_TYPE_COLLECTION}/{self.COL_ID_1}'
+        )
         self.assertEqual(
             learner_progress_services.get_all_incomplete_collection_ids(
                 self.user_id), [])
 
         # Remove one story.
         self.delete_json(
-            '%s/%s/%s' %
-            (
-                feconf.LEARNER_INCOMPLETE_ACTIVITY_DATA_URL,
-                constants.ACTIVITY_TYPE_STORY,
-                self.STORY_ID))
+            f'{feconf.LEARNER_INCOMPLETE_ACTIVITY_DATA_URL}/{constants.ACTIVITY_TYPE_STORY}/{self.STORY_ID}'
+        )
         self.assertEqual(
             learner_progress_services.get_all_incomplete_story_ids(
                 self.user_id), [])
 
         # Remove one topic.
         self.delete_json(
-            '%s/%s/%s' %
-            (
-                feconf.LEARNER_INCOMPLETE_ACTIVITY_DATA_URL,
-                constants.ACTIVITY_TYPE_LEARN_TOPIC,
-                self.TOPIC_ID))
+            f'{feconf.LEARNER_INCOMPLETE_ACTIVITY_DATA_URL}/{constants.ACTIVITY_TYPE_LEARN_TOPIC}/{self.TOPIC_ID}'
+        )
         self.assertEqual(
             learner_progress_services.get_all_partially_learnt_topic_ids(
                 self.user_id), [])
@@ -1744,10 +1745,14 @@ class StorePlaythroughHandlerTest(test_utils.GenericTestBase):
         """Test that a new playthrough gets created and is added to an existing
         issue's list of playthrough IDs.
         """
-        self.post_json('/explorehandler/store_playthrough/%s' % (self.exp_id), {
-            'playthrough_data': self.playthrough_data,
-            'issue_schema_version': 1,
-        }, csrf_token=self.csrf_token)
+        self.post_json(
+            f'/explorehandler/store_playthrough/{self.exp_id}',
+            {
+                'playthrough_data': self.playthrough_data,
+                'issue_schema_version': 1,
+            },
+            csrf_token=self.csrf_token,
+        )
         self.process_and_flush_pending_tasks()
 
         model = stats_models.ExplorationIssuesModel.get_model(self.exp_id, 1)
@@ -1762,10 +1767,14 @@ class StorePlaythroughHandlerTest(test_utils.GenericTestBase):
         self.playthrough_data['issue_customization_args']['state_name'][
             'value'] = 'state_name2'
 
-        self.post_json('/explorehandler/store_playthrough/%s' % (self.exp_id), {
-            'playthrough_data': self.playthrough_data,
-            'issue_schema_version': 1,
-        }, csrf_token=self.csrf_token)
+        self.post_json(
+            f'/explorehandler/store_playthrough/{self.exp_id}',
+            {
+                'playthrough_data': self.playthrough_data,
+                'issue_schema_version': 1,
+            },
+            csrf_token=self.csrf_token,
+        )
         self.process_and_flush_pending_tasks()
 
         model = stats_models.ExplorationIssuesModel.get_model(self.exp_id, 1)
@@ -1833,10 +1842,14 @@ class StorePlaythroughHandlerTest(test_utils.GenericTestBase):
             ],
         }
 
-        self.post_json('/explorehandler/store_playthrough/%s' % (self.exp_id), {
-            'playthrough_data': self.playthrough_data,
-            'issue_schema_version': 1,
-        }, csrf_token=self.csrf_token)
+        self.post_json(
+            f'/explorehandler/store_playthrough/{self.exp_id}',
+            {
+                'playthrough_data': self.playthrough_data,
+                'issue_schema_version': 1,
+            },
+            csrf_token=self.csrf_token,
+        )
         self.process_and_flush_pending_tasks()
 
         model = stats_models.ExplorationIssuesModel.get_model(self.exp_id, 1)
@@ -1904,10 +1917,14 @@ class StorePlaythroughHandlerTest(test_utils.GenericTestBase):
             ]
         }
 
-        self.post_json('/explorehandler/store_playthrough/%s' % (self.exp_id), {
-            'playthrough_data': self.playthrough_data,
-            'issue_schema_version': 1,
-        }, csrf_token=self.csrf_token)
+        self.post_json(
+            f'/explorehandler/store_playthrough/{self.exp_id}',
+            {
+                'playthrough_data': self.playthrough_data,
+                'issue_schema_version': 1,
+            },
+            csrf_token=self.csrf_token,
+        )
         self.process_and_flush_pending_tasks()
 
         model = stats_models.ExplorationIssuesModel.get_model(self.exp_id, 1)
@@ -1929,10 +1946,14 @@ class StorePlaythroughHandlerTest(test_utils.GenericTestBase):
         model.update_timestamps()
         model.put()
 
-        self.post_json('/explorehandler/store_playthrough/%s' % (self.exp_id), {
-            'playthrough_data': self.playthrough_data,
-            'issue_schema_version': 1,
-        }, csrf_token=self.csrf_token)
+        self.post_json(
+            f'/explorehandler/store_playthrough/{self.exp_id}',
+            {
+                'playthrough_data': self.playthrough_data,
+                'issue_schema_version': 1,
+            },
+            csrf_token=self.csrf_token,
+        )
         self.process_and_flush_pending_tasks()
 
         model = stats_models.ExplorationIssuesModel.get_model(self.exp_id, 1)
@@ -1944,17 +1965,27 @@ class StorePlaythroughHandlerTest(test_utils.GenericTestBase):
         """Test that passing a payload without schema version raises an
         exception.
         """
-        self.post_json('/explorehandler/store_playthrough/%s' % (self.exp_id), {
-            'playthrough_data': self.playthrough_data,
-        }, csrf_token=self.csrf_token, expected_status_int=400)
+        self.post_json(
+            f'/explorehandler/store_playthrough/{self.exp_id}',
+            {
+                'playthrough_data': self.playthrough_data,
+            },
+            csrf_token=self.csrf_token,
+            expected_status_int=400,
+        )
 
     def test_error_on_invalid_playthrough_dict(self) -> None:
         """Test that passing an invalid playthrough dict raises an exception."""
         self.playthrough_data['issue_type'] = 'FakeIssueType'
-        self.post_json('/explorehandler/store_playthrough/%s' % (self.exp_id), {
-            'playthrough_data': self.playthrough_data,
-            'issue_schema_version': 1,
-        }, csrf_token=self.csrf_token, expected_status_int=400)
+        self.post_json(
+            f'/explorehandler/store_playthrough/{self.exp_id}',
+            {
+                'playthrough_data': self.playthrough_data,
+                'issue_schema_version': 1,
+            },
+            csrf_token=self.csrf_token,
+            expected_status_int=400,
+        )
 
 
 class StatsEventHandlerTest(test_utils.GenericTestBase):
@@ -1999,18 +2030,20 @@ class StatsEventHandlerTest(test_utils.GenericTestBase):
     def test_none_version_raises_exception(self) -> None:
         """Test that error is raised on None exp_version."""
         self.post_json(
-            '/explorehandler/stats_events/%s' % (
-                self.exp_id), {
-                    'aggregated_stats': self.aggregated_stats,
-                    'exp_version': None},
-            expected_status_int=400)
+            f'/explorehandler/stats_events/{self.exp_id}',
+            {'aggregated_stats': self.aggregated_stats, 'exp_version': None},
+            expected_status_int=400,
+        )
 
     def test_stats_events_handler(self) -> None:
         """Test the handler for handling batched events."""
-        self.post_json('/explorehandler/stats_events/%s' % (
-            self.exp_id), {
+        self.post_json(
+            f'/explorehandler/stats_events/{self.exp_id}',
+            {
                 'aggregated_stats': self.aggregated_stats,
-                'exp_version': self.exp_version})
+                'exp_version': self.exp_version,
+            },
+        )
 
         self.assertEqual(self.count_jobs_in_taskqueue(
             taskqueue_services.QUEUE_NAME_STATS), 1)
@@ -2049,11 +2082,14 @@ class StatsEventHandlerTest(test_utils.GenericTestBase):
         # from TypedDict.
         self.aggregated_stats.pop('num_starts')  # type: ignore[misc]
 
-        response = self.post_json('/explorehandler/stats_events/%s' % (
-            self.exp_id), {
+        response = self.post_json(
+            f'/explorehandler/stats_events/{self.exp_id}',
+            {
                 'aggregated_stats': self.aggregated_stats,
-                'exp_version': self.exp_version
-        }, expected_status_int=400)
+                'exp_version': self.exp_version,
+            },
+            expected_status_int=400,
+        )
 
         error_msg = (
             'Schema validation for \'aggregated_stats\' '
@@ -2071,11 +2107,14 @@ class StatsEventHandlerTest(test_utils.GenericTestBase):
         # inputs that we can normally catch by typing.
         self.aggregated_stats['num_starts'] = 'invalid'  # type: ignore[arg-type]
 
-        response = self.post_json('/explorehandler/stats_events/%s' % (
-            self.exp_id), {
+        response = self.post_json(
+            f'/explorehandler/stats_events/{self.exp_id}',
+            {
                 'aggregated_stats': self.aggregated_stats,
-                'exp_version': self.exp_version
-        }, expected_status_int=400)
+                'exp_version': self.exp_version,
+            },
+            expected_status_int=400,
+        )
 
         error_msg = (
             'Schema validation for \'aggregated_stats\' '
@@ -2091,10 +2130,14 @@ class StatsEventHandlerTest(test_utils.GenericTestBase):
         self.aggregated_stats['state_stats_mapping']['Home'].pop(
             'total_hit_count')
 
-        response = self.post_json('/explorehandler/stats_events/%s' % (
-                self.exp_id), {
-                    'aggregated_stats': self.aggregated_stats,
-                    'exp_version': self.exp_version}, expected_status_int=400)
+        response = self.post_json(
+            f'/explorehandler/stats_events/{self.exp_id}',
+            {
+                'aggregated_stats': self.aggregated_stats,
+                'exp_version': self.exp_version,
+            },
+            expected_status_int=400,
+        )
 
         error_msg = (
             'Schema validation for \'aggregated_stats\' '
@@ -2116,11 +2159,12 @@ class StatsEventHandlerTest(test_utils.GenericTestBase):
         ] = 'invalid'  # type: ignore[assignment]
 
         response = self.post_json(
-            '/explorehandler/stats_events/%s' % self.exp_id,
+            f'/explorehandler/stats_events/{self.exp_id}',
             {
                 'aggregated_stats': self.aggregated_stats,
-                'exp_version': self.exp_version
-            }, expected_status_int=400
+                'exp_version': self.exp_version,
+            },
+            expected_status_int=400,
         )
 
         error_msg = (
@@ -2146,11 +2190,12 @@ class AnswerSubmittedEventHandlerTest(test_utils.GenericTestBase):
         self.login(self.VIEWER_EMAIL)
 
         exploration_dict = self.get_json(
-            '%s/%s' % (feconf.EXPLORATION_INIT_URL_PREFIX, exp_id))
+            f'{feconf.EXPLORATION_INIT_URL_PREFIX}/{exp_id}'
+        )
         state_name_1 = exploration_dict['exploration']['init_state_name']
 
         self.post_json(
-            '/explorehandler/answer_submitted_event/%s' % exp_id,
+            f'/explorehandler/answer_submitted_event/{exp_id}',
             {
                 'old_state_name': state_name_1,
                 'answer': 'This is an answer.',
@@ -2160,8 +2205,9 @@ class AnswerSubmittedEventHandlerTest(test_utils.GenericTestBase):
                 'answer_group_index': 0,
                 'rule_spec_index': 0,
                 'classification_categorization': (
-                    exp_domain.EXPLICIT_CLASSIFICATION),
-            }
+                    exp_domain.EXPLICIT_CLASSIFICATION
+                ),
+            },
         )
         submitted_answer = stats_services.get_state_answers(
             exp_id, version, state_name_1)
@@ -2185,11 +2231,12 @@ class AnswerSubmittedEventHandlerTest(test_utils.GenericTestBase):
         self.login(self.VIEWER_EMAIL)
 
         exploration_dict = self.get_json(
-            '%s/%s' % (feconf.EXPLORATION_INIT_URL_PREFIX, exp_id))
+            f'{feconf.EXPLORATION_INIT_URL_PREFIX}/{exp_id}'
+        )
         state_name_1 = exploration_dict['exploration']['init_state_name']
 
         response = self.post_json(
-            '/explorehandler/answer_submitted_event/%s' % exp_id,
+            f'/explorehandler/answer_submitted_event/{exp_id}',
             {
                 'old_state_name': state_name_1,
                 'answer': 'This is an answer.',
@@ -2199,8 +2246,10 @@ class AnswerSubmittedEventHandlerTest(test_utils.GenericTestBase):
                 'answer_group_index': 0,
                 'rule_spec_index': 0,
                 'classification_categorization': (
-                    exp_domain.EXPLICIT_CLASSIFICATION),
-            }, expected_status_int=400
+                    exp_domain.EXPLICIT_CLASSIFICATION
+                ),
+            },
+            expected_status_int=400,
         )
         self.assertEqual(
             response['error'], 'Missing key in handler args: version.'
@@ -2219,11 +2268,12 @@ class AnswerSubmittedEventHandlerTest(test_utils.GenericTestBase):
         self.login(self.VIEWER_EMAIL)
 
         exploration_dict = self.get_json(
-            '%s/%s' % (feconf.EXPLORATION_INIT_URL_PREFIX, exp_id))
+            f'{feconf.EXPLORATION_INIT_URL_PREFIX}/{exp_id}'
+        )
         state_name_1 = exploration_dict['exploration']['init_state_name']
 
         response = self.post_json(
-            '/explorehandler/answer_submitted_event/%s' % exp_id,
+            f'/explorehandler/answer_submitted_event/{exp_id}',
             {
                 'old_state_name': state_name_1,
                 'answer': 1.1,
@@ -2233,8 +2283,10 @@ class AnswerSubmittedEventHandlerTest(test_utils.GenericTestBase):
                 'answer_group_index': 0,
                 'rule_spec_index': 0,
                 'classification_categorization': (
-                    exp_domain.EXPLICIT_CLASSIFICATION),
-            }, expected_status_int=400
+                    exp_domain.EXPLICIT_CLASSIFICATION
+                ),
+            },
+            expected_status_int=400,
         )
         self.assertEqual(
             response['error'],
@@ -2262,14 +2314,14 @@ class StateHitEventHandlerTests(test_utils.GenericTestBase):
         self.assertEqual(all_models.count(), 0)
 
         self.post_json(
-            '/explorehandler/state_hit_event/%s' % exp_id,
+            f'/explorehandler/state_hit_event/{exp_id}',
             {
                 'new_state_name': 'new_state',
                 'exploration_version': exploration_version,
                 'client_time_spent_in_secs': 0,
                 'session_id': 'session_id',
-                'old_params': {}
-            }
+                'old_params': {},
+            },
         )
 
         all_models = (
@@ -2301,14 +2353,15 @@ class StateHitEventHandlerTests(test_utils.GenericTestBase):
         self.assertEqual(all_models.count(), 0)
 
         response = self.post_json(
-            '/explorehandler/state_hit_event/%s' % exp_id,
+            f'/explorehandler/state_hit_event/{exp_id}',
             {
                 'new_state_name': 'new_state',
                 'exploration_version': None,
                 'client_time_spent_in_secs': 0,
                 'session_id': 'session_id',
-                'old_params': {}
-            }, expected_status_int=400
+                'old_params': {},
+            },
+            expected_status_int=400,
         )
         self.assertEqual(
             response['error'],
@@ -2331,15 +2384,15 @@ class StateHitEventHandlerTests(test_utils.GenericTestBase):
         self.assertEqual(all_models.count(), 0)
 
         response = self.post_json(
-            '/explorehandler/state_hit_event/%s' % exp_id,
+            f'/explorehandler/state_hit_event/{exp_id}',
             {
                 'new_state_name': None,
                 'exploration_version': exploration_version,
                 'client_time_spent_in_secs': 0,
                 'session_id': 'session_id',
-                'old_params': {}
+                'old_params': {},
             },
-            expected_status_int=400
+            expected_status_int=400,
         )
 
         self.assertEqual(
@@ -2369,13 +2422,13 @@ class StateCompleteEventHandlerTests(test_utils.GenericTestBase):
         self.assertEqual(all_models.count(), 0)
 
         self.post_json(
-            '/explorehandler/state_complete_event/%s' % exp_id,
+            f'/explorehandler/state_complete_event/{exp_id}',
             {
                 'state_name': 'state_name',
                 'exp_version': exp_version,
                 'time_spent_in_state_secs': 2.0,
-                'session_id': 'session_id'
-            }
+                'session_id': 'session_id',
+            },
         )
 
         all_models = (
@@ -2406,12 +2459,13 @@ class StateCompleteEventHandlerTests(test_utils.GenericTestBase):
         self.assertEqual(all_models.count(), 0)
 
         response = self.post_json(
-            '/explorehandler/state_complete_event/%s' % exp_id,
+            f'/explorehandler/state_complete_event/{exp_id}',
             {
                 'state_name': 'state_name',
                 'time_spent_in_state_secs': 2.0,
-                'session_id': 'session_id'
-            }, expected_status_int=400
+                'session_id': 'session_id',
+            },
+            expected_status_int=400,
         )
 
         error_msg = 'Missing key in handler args: exp_version.'
@@ -2440,14 +2494,14 @@ class LeaveForRefresherExpEventHandlerTests(test_utils.GenericTestBase):
         self.assertEqual(all_models.count(), 0)
 
         self.post_json(
-            '/explorehandler/leave_for_refresher_exp_event/%s' % exp_id,
+            f'/explorehandler/leave_for_refresher_exp_event/{exp_id}',
             {
                 'state_name': 'state_name',
                 'exp_version': exp_version,
                 'time_spent_in_state_secs': 2.0,
                 'session_id': 'session_id',
-                'refresher_exp_id': 'refresher_exp_id'
-            }
+                'refresher_exp_id': 'refresher_exp_id',
+            },
         )
 
         all_models = (
@@ -2485,9 +2539,10 @@ class ExplorationStartEventHandlerTests(test_utils.GenericTestBase):
         self.login(self.VIEWER_EMAIL)
 
         self.get_json(
-            '%s/%s' % (feconf.EXPLORATION_INIT_URL_PREFIX, exp_id),
+            f'{feconf.EXPLORATION_INIT_URL_PREFIX}/{exp_id}',
             {'v': 5},
-            expected_status_int=404)
+            expected_status_int=404,
+        )
 
         self.logout()
 
@@ -2502,7 +2557,8 @@ class ExplorationStartEventHandlerTests(test_utils.GenericTestBase):
         self.login(self.VIEWER_EMAIL)
 
         exploration_dict = self.get_json(
-            '%s/%s' % (feconf.EXPLORATION_INIT_URL_PREFIX, exp_id))
+            f'{feconf.EXPLORATION_INIT_URL_PREFIX}/{exp_id}'
+        )
         self.assertIsNone(
             exploration_dict['furthest_reached_checkpoint_exp_version'])
         self.assertIsNone(
@@ -2529,17 +2585,18 @@ class ExplorationStartEventHandlerTests(test_utils.GenericTestBase):
         # First checkpoint reached.
         csrf_token = self.get_new_csrf_token()
         self.put_json(
-            '/explorehandler/checkpoint_reached/%s' % exp_id,
+            f'/explorehandler/checkpoint_reached/{exp_id}',
             {
                 'most_recently_reached_checkpoint_exp_version': 2,
-                'most_recently_reached_checkpoint_state_name': 'Welcome!'
+                'most_recently_reached_checkpoint_state_name': 'Welcome!',
             },
-            csrf_token=csrf_token
+            csrf_token=csrf_token,
         )
 
         # Fetching latest exploration.
         exploration_dict = self.get_json(
-            '%s/%s' % (feconf.EXPLORATION_INIT_URL_PREFIX, exp_id))
+            f'{feconf.EXPLORATION_INIT_URL_PREFIX}/{exp_id}'
+        )
         self.assertEqual(
             exploration_dict['furthest_reached_checkpoint_exp_version'], 2)
         self.assertEqual(
@@ -2554,8 +2611,8 @@ class ExplorationStartEventHandlerTests(test_utils.GenericTestBase):
 
         # Fetching older exploration.
         exploration_dict = self.get_json(
-            '%s/%s' % (feconf.EXPLORATION_INIT_URL_PREFIX, exp_id),
-            {'v': 1})
+            f'{feconf.EXPLORATION_INIT_URL_PREFIX}/{exp_id}', {'v': 1}
+        )
         self.assertIsNone(
             exploration_dict['furthest_reached_checkpoint_exp_version'])
         self.assertIsNone(
@@ -2580,15 +2637,13 @@ class ExplorationStartEventHandlerTests(test_utils.GenericTestBase):
         self.assertEqual(all_models.count(), 0)
 
         self.post_json(
-            '/explorehandler/exploration_start_event/%s' % exp_id,
+            f'/explorehandler/exploration_start_event/{exp_id}',
             {
                 'state_name': 'state_name',
                 'version': version,
-                'params': {
-                    'test_param1': 1
-                },
-                'session_id': 'session_id'
-            }
+                'params': {'test_param1': 1},
+                'session_id': 'session_id',
+            },
         )
 
         all_models = (
@@ -2622,12 +2677,9 @@ class ExplorationStartEventHandlerTests(test_utils.GenericTestBase):
         self.assertEqual(all_models.count(), 0)
 
         response = self.post_json(
-            '/explorehandler/exploration_start_event/%s' % exp_id,
-            {
-                'state_name': 'state_name',
-                'params': {},
-                'session_id': 'session_id'
-            }, expected_status_int=400
+            f'/explorehandler/exploration_start_event/{exp_id}',
+            {'state_name': 'state_name', 'params': {}, 'session_id': 'session_id'},
+            expected_status_int=400,
         )
 
         error_msg = 'Missing key in handler args: version.'
@@ -2655,12 +2707,12 @@ class ExplorationActualStartEventHandlerTests(test_utils.GenericTestBase):
         self.assertEqual(all_models.count(), 0)
 
         self.post_json(
-            '/explorehandler/exploration_actual_start_event/%s' % exp_id,
+            f'/explorehandler/exploration_actual_start_event/{exp_id}',
             {
                 'state_name': 'state_name',
                 'exploration_version': version,
-                'session_id': 'session_id'
-            }
+                'session_id': 'session_id',
+            },
         )
 
         all_models = (
@@ -2692,11 +2744,9 @@ class ExplorationActualStartEventHandlerTests(test_utils.GenericTestBase):
         self.assertEqual(all_models.count(), 0)
 
         response = self.post_json(
-            '/explorehandler/exploration_actual_start_event/%s' % exp_id,
-            {
-                'state_name': 'state_name',
-                'session_id': 'session_id'
-            }, expected_status_int=400
+            f'/explorehandler/exploration_actual_start_event/{exp_id}',
+            {'state_name': 'state_name', 'session_id': 'session_id'},
+            expected_status_int=400,
         )
 
         error_msg = 'Missing key in handler args: exploration_version.'
@@ -2724,13 +2774,13 @@ class SolutionHitEventHandlerTests(test_utils.GenericTestBase):
         self.assertEqual(all_models.count(), 0)
 
         self.post_json(
-            '/explorehandler/solution_hit_event/%s' % exp_id,
+            f'/explorehandler/solution_hit_event/{exp_id}',
             {
                 'state_name': 'state_name',
                 'exploration_version': version,
                 'session_id': 'session_id',
-                'time_spent_in_state_secs': 2.0
-            }
+                'time_spent_in_state_secs': 2.0,
+            },
         )
 
         all_models = (
@@ -2761,12 +2811,13 @@ class SolutionHitEventHandlerTests(test_utils.GenericTestBase):
         self.assertEqual(all_models.count(), 0)
 
         response = self.post_json(
-            '/explorehandler/solution_hit_event/%s' % exp_id,
+            f'/explorehandler/solution_hit_event/{exp_id}',
             {
                 'state_name': 'state_name',
                 'session_id': 'session_id',
-                'time_spent_in_state_secs': 2.0
-            }, expected_status_int=400
+                'time_spent_in_state_secs': 2.0,
+            },
+            expected_status_int=400,
         )
         error_msg = 'Missing key in handler args: exploration_version.'
         self.assertEqual(response['error'], error_msg)
@@ -2792,11 +2843,8 @@ class ExplorationEmbedPageTests(test_utils.GenericTestBase):
             self.EXP_ID, self.owner_id)
 
         response = self.get_html_response(
-            '%s/%s' % (feconf.EXPLORATION_URL_EMBED_PREFIX, self.EXP_ID),
-            params={
-                'v': exploration.version,
-                'collection_id': self.COL_ID
-            }
+            f'{feconf.EXPLORATION_URL_EMBED_PREFIX}/{self.EXP_ID}',
+            params={'v': exploration.version, 'collection_id': self.COL_ID},
         )
         self.assertIn(b'<oppia-root></oppia-root>', response.body)
 
@@ -2807,10 +2855,9 @@ class ExplorationEmbedPageTests(test_utils.GenericTestBase):
         self.save_new_valid_collection(self.COL_ID, self.owner_id)
 
         self.get_html_response(
-            '%s/invalid_exp_id' % (feconf.EXPLORATION_URL_EMBED_PREFIX),
-            params={
-                'collection_id': self.COL_ID
-            }, expected_status_int=400
+            f'{feconf.EXPLORATION_URL_EMBED_PREFIX}/invalid_exp_id',
+            params={'collection_id': self.COL_ID},
+            expected_status_int=400,
         )
 
         self.logout()
@@ -2821,11 +2868,12 @@ class ExplorationEmbedPageTests(test_utils.GenericTestBase):
             self.EXP_ID, self.owner_id)
 
         self.get_html_response(
-            '%s/%s' % (feconf.EXPLORATION_URL_EMBED_PREFIX, self.EXP_ID),
+            f'{feconf.EXPLORATION_URL_EMBED_PREFIX}/{self.EXP_ID}',
             params={
                 'v': exploration.version,
-                'collection_id': 'invalid_collection_id'
-            }, expected_status_int=400
+                'collection_id': 'invalid_collection_id',
+            },
+            expected_status_int=400,
         )
 
         self.logout()
@@ -2836,11 +2884,9 @@ class ExplorationEmbedPageTests(test_utils.GenericTestBase):
             self.EXP_ID, self.owner_id)
 
         self.get_html_response(
-            '%s/%s' % (feconf.EXPLORATION_URL_EMBED_PREFIX, self.EXP_ID),
-            params={
-                'v': exploration.version,
-                'collection_id': 'aZ9_______12'
-            }, expected_status_int=404
+            f'{feconf.EXPLORATION_URL_EMBED_PREFIX}/{self.EXP_ID}',
+            params={'v': exploration.version, 'collection_id': 'aZ9_______12'},
+            expected_status_int=404,
         )
 
         self.logout()
@@ -2851,11 +2897,9 @@ class ExplorationEmbedPageTests(test_utils.GenericTestBase):
         self.save_new_valid_collection(self.COL_ID, self.owner_id)
 
         self.get_html_response(
-            '%s/%s' % (feconf.EXPLORATION_URL_EMBED_PREFIX, self.EXP_ID),
-            params={
-                'v': '10',
-                'collection_id': self.COL_ID
-            }, expected_status_int=404
+            f'{feconf.EXPLORATION_URL_EMBED_PREFIX}/{self.EXP_ID}',
+            params={'v': '10', 'collection_id': self.COL_ID},
+            expected_status_int=404,
         )
 
         self.logout()
@@ -2876,21 +2920,23 @@ class LearnerAnswerDetailsSubmissionHandlerTests(test_utils.GenericTestBase):
 
         csrf_token = self.get_new_csrf_token()
         with self.swap(
-            constants, 'ENABLE_SOLICIT_ANSWER_DETAILS_FEATURE', False):
+                constants, 'ENABLE_SOLICIT_ANSWER_DETAILS_FEATURE', False):
             self.put_json(
-                '%s/%s/%s' % (
-                    feconf.LEARNER_ANSWER_DETAILS_SUBMIT_URL,
-                    entity_type, exp_id),
+                f'{feconf.LEARNER_ANSWER_DETAILS_SUBMIT_URL}/{entity_type}/{exp_id}',
                 {
                     'state_name': 'abc',
                     'interaction_id': 'TextInput',
                     'answer': 'This is an answer.',
                     'answer_details': 'This is an answer details.',
-                }, csrf_token=csrf_token, expected_status_int=404)
+                },
+                csrf_token=csrf_token,
+                expected_status_int=404,
+            )
         with self.swap(
-            constants, 'ENABLE_SOLICIT_ANSWER_DETAILS_FEATURE', True):
+                constants, 'ENABLE_SOLICIT_ANSWER_DETAILS_FEATURE', True):
             exploration_dict = self.get_json(
-                '%s/%s' % (feconf.EXPLORATION_INIT_URL_PREFIX, exp_id))
+                f'{feconf.EXPLORATION_INIT_URL_PREFIX}/{exp_id}'
+            )
             state_name = exploration_dict['exploration']['init_state_name']
             interaction_id = exploration_dict['exploration'][
                 'states'][state_name]['interaction']['id']
@@ -2901,15 +2947,15 @@ class LearnerAnswerDetailsSubmissionHandlerTests(test_utils.GenericTestBase):
             self.assertEqual(state_name, 'Sentence')
             self.assertEqual(interaction_id, 'TextInput')
             self.put_json(
-                '%s/%s/%s' % (
-                    feconf.LEARNER_ANSWER_DETAILS_SUBMIT_URL,
-                    entity_type, exp_id),
+                f'{feconf.LEARNER_ANSWER_DETAILS_SUBMIT_URL}/{entity_type}/{exp_id}',
                 {
                     'state_name': state_name,
                     'interaction_id': interaction_id,
                     'answer': 'This is an answer.',
                     'answer_details': 'This is an answer details.',
-                }, csrf_token=csrf_token)
+                },
+                csrf_token=csrf_token,
+            )
 
             learner_answer_details = stats_services.get_learner_answer_details(
                 entity_type, state_reference)
@@ -2928,15 +2974,16 @@ class LearnerAnswerDetailsSubmissionHandlerTests(test_utils.GenericTestBase):
                 .answer_details,
                 'This is an answer details.')
             self.put_json(
-                '%s/%s/%s' % (
-                    feconf.LEARNER_ANSWER_DETAILS_SUBMIT_URL,
-                    entity_type, exp_id),
+                f'{feconf.LEARNER_ANSWER_DETAILS_SUBMIT_URL}/{entity_type}/{exp_id}',
                 {
                     'state_name': state_name,
                     'interaction_id': 'GraphInput',
                     'answer': 'This is an answer.',
                     'answer_details': 'This is an answer details.',
-                }, csrf_token=csrf_token, expected_status_int=500)
+                },
+                csrf_token=csrf_token,
+                expected_status_int=500,
+            )
 
     def test_cannot_submit_answer_details_for_exploration_without_state_name(
         self
@@ -2950,9 +2997,10 @@ class LearnerAnswerDetailsSubmissionHandlerTests(test_utils.GenericTestBase):
 
         csrf_token = self.get_new_csrf_token()
         with self.swap(
-            constants, 'ENABLE_SOLICIT_ANSWER_DETAILS_FEATURE', True):
+                constants, 'ENABLE_SOLICIT_ANSWER_DETAILS_FEATURE', True):
             exploration_dict = self.get_json(
-                '%s/%s' % (feconf.EXPLORATION_INIT_URL_PREFIX, exp_id))
+                f'{feconf.EXPLORATION_INIT_URL_PREFIX}/{exp_id}'
+            )
             state_name = exploration_dict['exploration']['init_state_name']
             interaction_id = exploration_dict['exploration'][
                 'states'][state_name]['interaction']['id']
@@ -2960,16 +3008,14 @@ class LearnerAnswerDetailsSubmissionHandlerTests(test_utils.GenericTestBase):
             self.assertEqual(state_name, 'Sentence')
             self.assertEqual(interaction_id, 'TextInput')
             response = self.put_json(
-                '%s/%s/%s' % (
-                    feconf.LEARNER_ANSWER_DETAILS_SUBMIT_URL,
-                    entity_type, exp_id),
+                f'{feconf.LEARNER_ANSWER_DETAILS_SUBMIT_URL}/{entity_type}/{exp_id}',
                 {
                     'interaction_id': interaction_id,
                     'answer': 'This is an answer.',
                     'answer_details': 'This is an answer details.',
                 },
                 csrf_token=csrf_token,
-                expected_status_int=500
+                expected_status_int=500,
             )
 
         self.assertEqual(
@@ -2989,42 +3035,43 @@ class LearnerAnswerDetailsSubmissionHandlerTests(test_utils.GenericTestBase):
             question_id, editor_id,
             self._create_valid_question_data('ABC'), ['skill_1'])
         with self.swap(
-            constants, 'ENABLE_SOLICIT_ANSWER_DETAILS_FEATURE', True):
+                constants, 'ENABLE_SOLICIT_ANSWER_DETAILS_FEATURE', True):
             state_reference = (
                 stats_services.get_state_reference_for_question(question_id))
             self.assertEqual(state_reference, question_id)
             self.put_json(
-                '%s/%s/%s' % (
-                    feconf.LEARNER_ANSWER_DETAILS_SUBMIT_URL,
-                    feconf.ENTITY_TYPE_QUESTION, question_id),
+                f'{feconf.LEARNER_ANSWER_DETAILS_SUBMIT_URL}/{feconf.ENTITY_TYPE_QUESTION}/{question_id}',
                 {
                     'interaction_id': 'TextInput',
                     'answer': 'This is an answer.',
                     'answer_details': 'This is an answer details.',
-                }, csrf_token=csrf_token)
+                },
+                csrf_token=csrf_token,
+            )
             learner_answer_details = stats_services.get_learner_answer_details(
                 feconf.ENTITY_TYPE_QUESTION, state_reference)
             assert learner_answer_details is not None
             self.assertEqual(
                 learner_answer_details.state_reference, state_reference)
             self.put_json(
-                '%s/%s/%s' % (
-                    feconf.LEARNER_ANSWER_DETAILS_SUBMIT_URL,
-                    feconf.ENTITY_TYPE_QUESTION, question_id),
+                f'{feconf.LEARNER_ANSWER_DETAILS_SUBMIT_URL}/{feconf.ENTITY_TYPE_QUESTION}/{question_id}',
                 {
                     'interaction_id': 'TextInput',
                     'answer': 'This is an answer.',
                     'answer_details': 'This is an answer details.',
-                }, csrf_token=csrf_token)
+                },
+                csrf_token=csrf_token,
+            )
             self.put_json(
-                '%s/%s/%s' % (
-                    feconf.LEARNER_ANSWER_DETAILS_SUBMIT_URL,
-                    feconf.ENTITY_TYPE_QUESTION, question_id),
+                f'{feconf.LEARNER_ANSWER_DETAILS_SUBMIT_URL}/{feconf.ENTITY_TYPE_QUESTION}/{question_id}',
                 {
                     'interaction_id': 'GraphInput',
                     'answer': 'This is an answer.',
                     'answer_details': 'This is an answer details.',
-                }, csrf_token=csrf_token, expected_status_int=500)
+                },
+                csrf_token=csrf_token,
+                expected_status_int=500,
+            )
 
 
 class CheckpointReachedEventHandlerTests(test_utils.GenericTestBase):
@@ -3045,7 +3092,8 @@ class CheckpointReachedEventHandlerTests(test_utils.GenericTestBase):
 
         # Viewer opens exploration.
         exploration_dict = self.get_json(
-            '%s/%s' % (feconf.EXPLORATION_INIT_URL_PREFIX, exp_id))
+            f'{feconf.EXPLORATION_INIT_URL_PREFIX}/{exp_id}'
+        )
         self.assertIsNone(
             exploration_dict['furthest_reached_checkpoint_exp_version'])
         self.assertIsNone(
@@ -3058,12 +3106,12 @@ class CheckpointReachedEventHandlerTests(test_utils.GenericTestBase):
         # First checkpoint reached.
         csrf_token = self.get_new_csrf_token()
         self.put_json(
-            '/explorehandler/checkpoint_reached/%s' % exp_id,
+            f'/explorehandler/checkpoint_reached/{exp_id}',
             {
                 'most_recently_reached_checkpoint_exp_version': 1,
-                'most_recently_reached_checkpoint_state_name': 'Welcome!'
+                'most_recently_reached_checkpoint_state_name': 'Welcome!',
             },
-            csrf_token=csrf_token
+            csrf_token=csrf_token,
         )
 
         exp_user_data = exp_fetchers.get_exploration_user_data(
@@ -3095,7 +3143,8 @@ class CheckpointReachedEventHandlerTests(test_utils.GenericTestBase):
 
         # Viewer opens exploration again.
         exploration_dict = self.get_json(
-            '%s/%s' % (feconf.EXPLORATION_INIT_URL_PREFIX, exp_id))
+            f'{feconf.EXPLORATION_INIT_URL_PREFIX}/{exp_id}'
+        )
         self.assertEqual(
             exp_user_data.furthest_reached_checkpoint_exp_version, 1)
         self.assertEqual(
@@ -3109,12 +3158,12 @@ class CheckpointReachedEventHandlerTests(test_utils.GenericTestBase):
         # Second checkpoint reached.
         csrf_token = self.get_new_csrf_token()
         self.put_json(
-            '/explorehandler/checkpoint_reached/%s' % exp_id,
+            f'/explorehandler/checkpoint_reached/{exp_id}',
             {
                 'most_recently_reached_checkpoint_exp_version': 2,
-                'most_recently_reached_checkpoint_state_name': 'What language'
+                'most_recently_reached_checkpoint_state_name': 'What language',
             },
-            csrf_token=csrf_token
+            csrf_token=csrf_token,
         )
         updated_exp_user_data = exp_fetchers.get_exploration_user_data(
             viewer_id, exp_id)
@@ -3154,7 +3203,8 @@ class ExplorationRestartEventHandlerTests(test_utils.GenericTestBase):
 
         # Viewer opens exploration.
         exploration_dict = self.get_json(
-            '%s/%s' % (feconf.EXPLORATION_INIT_URL_PREFIX, exp_id))
+            f'{feconf.EXPLORATION_INIT_URL_PREFIX}/{exp_id}'
+        )
         self.assertIsNone(
             exploration_dict['furthest_reached_checkpoint_exp_version'])
         self.assertIsNone(
@@ -3167,12 +3217,12 @@ class ExplorationRestartEventHandlerTests(test_utils.GenericTestBase):
         # First checkpoint reached.
         csrf_token = self.get_new_csrf_token()
         self.put_json(
-            '/explorehandler/checkpoint_reached/%s' % exp_id,
+            f'/explorehandler/checkpoint_reached/{exp_id}',
             {
                 'most_recently_reached_checkpoint_exp_version': 1,
-                'most_recently_reached_checkpoint_state_name': 'Welcome!'
+                'most_recently_reached_checkpoint_state_name': 'Welcome!',
             },
-            csrf_token=csrf_token
+            csrf_token=csrf_token,
         )
         exp_user_data = exp_fetchers.get_exploration_user_data(
             viewer_id, exp_id)
@@ -3190,14 +3240,13 @@ class ExplorationRestartEventHandlerTests(test_utils.GenericTestBase):
         # Exploration restarted.
         csrf_token = self.get_new_csrf_token()
         self.put_json(
-            '/explorehandler/restart/%s' % exp_id,
-            {
-                'most_recently_reached_checkpoint_state_name': None
-            },
-            csrf_token=csrf_token
+            f'/explorehandler/restart/{exp_id}',
+            {'most_recently_reached_checkpoint_state_name': None},
+            csrf_token=csrf_token,
         )
         exploration_dict = self.get_json(
-            '%s/%s' % (feconf.EXPLORATION_INIT_URL_PREFIX, exp_id))
+            f'{feconf.EXPLORATION_INIT_URL_PREFIX}/{exp_id}'
+        )
         self.assertEqual(
             exploration_dict['furthest_reached_checkpoint_exp_version'], 1)
         self.assertEqual(
@@ -3227,7 +3276,8 @@ class SaveTransientCheckpointProgressHandlerTests(test_utils.GenericTestBase):
 
         # Logged out user opens exploration.
         exploration_dict = self.get_json(
-            '%s/%s' % (feconf.EXPLORATION_INIT_URL_PREFIX, exp_id))
+            f'{feconf.EXPLORATION_INIT_URL_PREFIX}/{exp_id}'
+        )
         self.assertIsNone(
             exploration_dict['furthest_reached_checkpoint_exp_version'])
         self.assertIsNone(
@@ -3240,12 +3290,12 @@ class SaveTransientCheckpointProgressHandlerTests(test_utils.GenericTestBase):
         # First checkpoint reached.
         csrf_token = self.get_new_csrf_token()
         response = self.post_json(
-            '/explorehandler/checkpoint_reached_by_logged_out_user/%s' % exp_id,
+            f'/explorehandler/checkpoint_reached_by_logged_out_user/{exp_id}',
             {
                 'most_recently_reached_checkpoint_exp_version': 1,
-                'most_recently_reached_checkpoint_state_name': 'Welcome!'
+                'most_recently_reached_checkpoint_state_name': 'Welcome!',
             },
-            csrf_token=csrf_token
+            csrf_token=csrf_token,
         )
 
         unique_progress_url_id = response['unique_progress_url_id']
@@ -3281,13 +3331,13 @@ class SaveTransientCheckpointProgressHandlerTests(test_utils.GenericTestBase):
         # Second checkpoint reached.
         csrf_token = self.get_new_csrf_token()
         self.put_json(
-            '/explorehandler/checkpoint_reached_by_logged_out_user/%s' % exp_id,
+            f'/explorehandler/checkpoint_reached_by_logged_out_user/{exp_id}',
             {
                 'unique_progress_url_id': unique_progress_url_id,
                 'most_recently_reached_checkpoint_exp_version': 2,
-                'most_recently_reached_checkpoint_state_name': 'What language'
+                'most_recently_reached_checkpoint_state_name': 'What language',
             },
-            csrf_token=csrf_token
+            csrf_token=csrf_token,
         )
         updated_exp_user_data = exp_fetchers.get_logged_out_user_progress(
             unique_progress_url_id
@@ -3314,8 +3364,7 @@ class TransientCheckpointUrlPageTests(test_utils.GenericTestBase):
         unique_progress_url_id = 'pid123'
 
         self.get_html_response(
-            '/progress/%s' % (unique_progress_url_id),
-            expected_status_int=404
+            f'/progress/{unique_progress_url_id}', expected_status_int=404
         )
 
     def test_logged_out_progress_is_displayed_correctly_when_exp_version_is_same( # pylint: disable=line-too-long
@@ -3330,7 +3379,8 @@ class TransientCheckpointUrlPageTests(test_utils.GenericTestBase):
 
         # Logged out user opens exploration.
         exploration_dict = self.get_json(
-            '%s/%s' % (feconf.EXPLORATION_INIT_URL_PREFIX, exp_id))
+            f'{feconf.EXPLORATION_INIT_URL_PREFIX}/{exp_id}'
+        )
         self.assertIsNone(
             exploration_dict['furthest_reached_checkpoint_exp_version'])
         self.assertIsNone(
@@ -3343,19 +3393,18 @@ class TransientCheckpointUrlPageTests(test_utils.GenericTestBase):
         # First checkpoint reached.
         csrf_token = self.get_new_csrf_token()
         response = self.post_json(
-            '/explorehandler/checkpoint_reached_by_logged_out_user/%s' % exp_id,
+            f'/explorehandler/checkpoint_reached_by_logged_out_user/{exp_id}',
             {
                 'most_recently_reached_checkpoint_exp_version': 1,
-                'most_recently_reached_checkpoint_state_name': 'Welcome!'
+                'most_recently_reached_checkpoint_state_name': 'Welcome!',
             },
-            csrf_token=csrf_token
+            csrf_token=csrf_token,
         )
 
         unique_progress_url_id = response['unique_progress_url_id']
 
         url_response = self.get_html_response(
-            '/progress/%s' % (unique_progress_url_id),
-            expected_status_int=302
+            f'/progress/{unique_progress_url_id}', expected_status_int=302
         )
 
         exp_user_data = exp_fetchers.get_logged_out_user_progress(
@@ -3364,17 +3413,13 @@ class TransientCheckpointUrlPageTests(test_utils.GenericTestBase):
         assert exp_user_data is not None
         self.assertTrue(
             url_response.headers['Location'].endswith(
-                '%s/%s?pid=%s' % (
-            feconf.EXPLORATION_URL_PREFIX,
-            exp_user_data.exploration_id,
-            unique_progress_url_id)))
+                f'{feconf.EXPLORATION_URL_PREFIX}/{exp_user_data.exploration_id}?pid={unique_progress_url_id}'
+            )
+        )
 
         exploration_dict = self.get_json(
-            '%s/%s?pid=%s' % (
-                feconf.EXPLORATION_INIT_URL_PREFIX,
-                exp_user_data.exploration_id,
-                unique_progress_url_id
-                ))
+            f'{feconf.EXPLORATION_INIT_URL_PREFIX}/{exp_user_data.exploration_id}?pid={unique_progress_url_id}'
+        )
         self.assertEqual(
             exploration_dict['furthest_reached_checkpoint_exp_version'], 1)
         self.assertEqual(
@@ -3400,7 +3445,8 @@ class TransientCheckpointUrlPageTests(test_utils.GenericTestBase):
 
         # Logged out user opens exploration.
         exploration_dict = self.get_json(
-            '%s/%s' % (feconf.EXPLORATION_INIT_URL_PREFIX, exp_id))
+            f'{feconf.EXPLORATION_INIT_URL_PREFIX}/{exp_id}'
+        )
         self.assertIsNone(
             exploration_dict['furthest_reached_checkpoint_exp_version'])
         self.assertIsNone(
@@ -3427,19 +3473,18 @@ class TransientCheckpointUrlPageTests(test_utils.GenericTestBase):
         # First checkpoint reached.
         csrf_token = self.get_new_csrf_token()
         response = self.post_json(
-            '/explorehandler/checkpoint_reached_by_logged_out_user/%s' % exp_id,
+            f'/explorehandler/checkpoint_reached_by_logged_out_user/{exp_id}',
             {
                 'most_recently_reached_checkpoint_exp_version': 1,
-                'most_recently_reached_checkpoint_state_name': 'Welcome!'
+                'most_recently_reached_checkpoint_state_name': 'Welcome!',
             },
-            csrf_token=csrf_token
+            csrf_token=csrf_token,
         )
 
         unique_progress_url_id = response['unique_progress_url_id']
 
         url_response = self.get_html_response(
-            '/progress/%s' % (unique_progress_url_id),
-            expected_status_int=302
+            f'/progress/{unique_progress_url_id}', expected_status_int=302
         )
 
         exp_user_data = exp_fetchers.get_logged_out_user_progress(
@@ -3449,17 +3494,13 @@ class TransientCheckpointUrlPageTests(test_utils.GenericTestBase):
 
         self.assertTrue(
             url_response.headers['Location'].endswith(
-                '%s/%s?pid=%s' % (
-            feconf.EXPLORATION_URL_PREFIX,
-            exp_user_data.exploration_id,
-            unique_progress_url_id)))
+                f'{feconf.EXPLORATION_URL_PREFIX}/{exp_user_data.exploration_id}?pid={unique_progress_url_id}'
+            )
+        )
 
         exploration_dict = self.get_json(
-            '%s/%s?pid=%s' % (
-                feconf.EXPLORATION_INIT_URL_PREFIX,
-                exp_user_data.exploration_id,
-                unique_progress_url_id
-                ))
+            f'{feconf.EXPLORATION_INIT_URL_PREFIX}/{exp_user_data.exploration_id}?pid={unique_progress_url_id}'
+        )
         self.assertEqual(
             exploration_dict['furthest_reached_checkpoint_exp_version'], 1)
         self.assertEqual(
@@ -3503,11 +3544,11 @@ class SyncLoggedOutLearnerProgressHandlerTests(test_utils.GenericTestBase):
 
         csrf_token = self.get_new_csrf_token()
         self.post_json(
-            '/sync_logged_out_and_logged_in_progress/%s' % exp_id, # pylint: disable=line-too-long
+            f'/sync_logged_out_and_logged_in_progress/{exp_id}',
             {
                 'unique_progress_url_id': pid,
             },
-            csrf_token=csrf_token
+            csrf_token=csrf_token,
         )
 
         exp_user_data = exp_fetchers.get_exploration_user_data(
@@ -3567,10 +3608,8 @@ class StateVersionHistoryHandlerUnitTests(test_utils.GenericTestBase):
         vh_model.delete()
 
         self.get_json(
-            '%s/%s/%s/%s' % (
-                feconf.STATE_VERSION_HISTORY_URL_PREFIX,
-                self.EXP_ID, 'a', 2
-            ), expected_status_int=404
+            f'{feconf.STATE_VERSION_HISTORY_URL_PREFIX}/{self.EXP_ID}/a/2',
+            expected_status_int=404,
         )
 
         self.logout()
@@ -3581,16 +3620,10 @@ class StateVersionHistoryHandlerUnitTests(test_utils.GenericTestBase):
             self.EXP_ID, version=1
         )
         response_for_state_a = self.get_json(
-            '%s/%s/%s/%s' % (
-                feconf.STATE_VERSION_HISTORY_URL_PREFIX,
-                self.EXP_ID, 'a', 2
-            )
+            f'{feconf.STATE_VERSION_HISTORY_URL_PREFIX}/{self.EXP_ID}/a/2'
         )
         response_for_state_b = self.get_json(
-            '%s/%s/%s/%s' % (
-                feconf.STATE_VERSION_HISTORY_URL_PREFIX,
-                self.EXP_ID, 'b', 2
-            )
+            f'{feconf.STATE_VERSION_HISTORY_URL_PREFIX}/{self.EXP_ID}/b/2'
         )
 
         self.assertEqual(
@@ -3653,9 +3686,9 @@ class MetadataVersionHistoryHandlerUnitTests(test_utils.GenericTestBase):
         vh_model.delete()
 
         self.get_json(
-            '%s/%s/%s' % (
-                feconf.METADATA_VERSION_HISTORY_URL_PREFIX, self.EXP_ID, 2
-            ), expected_status_int=404)
+            f'{feconf.METADATA_VERSION_HISTORY_URL_PREFIX}/{self.EXP_ID}/2',
+            expected_status_int=404,
+        )
 
         self.logout()
 
@@ -3667,9 +3700,7 @@ class MetadataVersionHistoryHandlerUnitTests(test_utils.GenericTestBase):
             self.EXP_ID, version=1
         )
         response = self.get_json(
-            '%s/%s/%s' % (
-                feconf.METADATA_VERSION_HISTORY_URL_PREFIX, self.EXP_ID, 2
-            )
+            f'{feconf.METADATA_VERSION_HISTORY_URL_PREFIX}/{self.EXP_ID}/2'
         )
 
         self.assertEqual(

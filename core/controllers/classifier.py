@@ -44,9 +44,7 @@ def validate_job_result_message_proto(
     Returns:
         bool. Whether the payload dict is valid.
     """
-    if job_result_proto.WhichOneof('classifier_frozen_model') is None:
-        return False
-    return True
+    return job_result_proto.WhichOneof('classifier_frozen_model') is not None
 
 
 class TrainedClassifierHandlerNormalizedRequestDict(TypedDict):
@@ -156,9 +154,9 @@ class TrainedClassifierHandler(
         parameters and transfers it to the frontend.
         """
         assert self.normalized_request is not None
-        exploration_id = self.normalized_request['exploration_id']
         state_name = self.normalized_request['state_name']
 
+        exploration_id = self.normalized_request['exploration_id']
         try:
             exp_version = int(self.normalized_request['exploration_version'])
             exploration = exp_fetchers.get_exploration_by_id(
@@ -166,19 +164,13 @@ class TrainedClassifierHandler(
             interaction_id = exploration.states[state_name].interaction.id
         except Exception as e:
             raise self.InvalidInputException(
-                'Entity for exploration with id %s, version %s and state %s '
-                'not found.' %
-                (
-                    exploration_id,
-                    self.normalized_request['exploration_version'],
-                    state_name
-                )
+                f"Entity for exploration with id {exploration_id}, version {self.normalized_request['exploration_version']} and state {state_name} not found."
             ) from e
 
         if interaction_id not in feconf.INTERACTION_CLASSIFIER_MAPPING:
             raise self.PageNotFoundException(
-                'No classifier algorithm found for %s interaction' % (
-                    interaction_id))
+                f'No classifier algorithm found for {interaction_id} interaction'
+            )
 
         algorithm_id = feconf.INTERACTION_CLASSIFIER_MAPPING[
             interaction_id]['algorithm_id']
@@ -192,9 +184,10 @@ class TrainedClassifierHandler(
             raise self.InvalidInputException(
                 'No training jobs exist for given exploration state')
 
-        if not (
-                algorithm_id in state_training_jobs_mapping.
-                algorithm_ids_to_job_ids):
+        if (
+            algorithm_id
+            not in state_training_jobs_mapping.algorithm_ids_to_job_ids
+        ):
             classifier_services.migrate_state_training_jobs(
                 state_training_jobs_mapping)
             # Since the required training job doesn't exist and old job has to

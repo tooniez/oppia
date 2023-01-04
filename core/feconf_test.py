@@ -32,9 +32,7 @@ class FeconfTests(test_utils.GenericTestBase):
 
     def test_dev_mode_in_production_throws_error(self) -> None:
         def mock_getenv(env: str) -> str:
-            if env == 'SERVER_SOFTWARE':
-                return 'Production'
-            return 'Development'
+            return 'Production' if env == 'SERVER_SOFTWARE' else 'Development'
 
         swap_getenv = self.swap(os, 'getenv', mock_getenv)
         with swap_getenv, self.assertRaisesRegex(
@@ -58,12 +56,14 @@ class FeconfTests(test_utils.GenericTestBase):
         recipient_username = 'Anshuman'
         self.assertEqual(
             feconf.DEFAULT_SALUTATION_HTML_FN(recipient_username),
-            'Hi %s,' % recipient_username)
+            f'Hi {recipient_username},',
+        )
 
         sender_username = 'Ezio'
         self.assertEqual(
             feconf.DEFAULT_SIGNOFF_HTML_FN(sender_username),
-            'Thanks!<br>%s (Oppia moderator)' % sender_username)
+            f'Thanks!<br>{sender_username} (Oppia moderator)',
+        )
 
         exploration_title = 'Test'
         self.assertEqual(

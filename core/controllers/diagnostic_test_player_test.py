@@ -129,10 +129,7 @@ class DiagnosticTestQuestionsHandlerTest(test_utils.GenericTestBase):
         question_services.create_new_question_skill_link(
             self.editor_id, self.question_id_6, 'skill_id_3', 0.5)
 
-        url = '%s/%s?excluded_question_ids=%s' % (
-            feconf.DIAGNOSTIC_TEST_QUESTIONS_HANDLER_URL, self.topic_id,
-            self.question_id_5
-        )
+        url = f'{feconf.DIAGNOSTIC_TEST_QUESTIONS_HANDLER_URL}/{self.topic_id}?excluded_question_ids={self.question_id_5}'
 
         json_response = self.get_json(url)
         received_skill_id_to_questions_dict = json_response[
@@ -167,8 +164,6 @@ class DiagnosticTestQuestionsHandlerTest(test_utils.GenericTestBase):
     def test_raise_error_for_non_existent_topic_id(self) -> None:
         non_existent_topic_id = topic_fetchers.get_new_topic_id()
 
-        url = '%s/%s?excluded_question_ids=%s' % (
-            feconf.DIAGNOSTIC_TEST_QUESTIONS_HANDLER_URL,
-            non_existent_topic_id, '')
+        url = f'{feconf.DIAGNOSTIC_TEST_QUESTIONS_HANDLER_URL}/{non_existent_topic_id}?excluded_question_ids='
 
         self.get_json(url, expected_status_int=404)

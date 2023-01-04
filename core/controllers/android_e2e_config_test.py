@@ -83,11 +83,13 @@ class AndroidConfigTest(test_utils.GenericTestBase):
             'android-end-to-end-testing')
         assert story is not None
         self.get_custom_response(
-            '/assetsdevhandler/topic/%s/assets/thumbnail/test_svg.svg' %
-            topic.id, 'image/svg+xml')
+            f'/assetsdevhandler/topic/{topic.id}/assets/thumbnail/test_svg.svg',
+            'image/svg+xml',
+        )
         self.get_custom_response(
-            '/assetsdevhandler/story/%s/assets/thumbnail/test_svg.svg' %
-            story.id, 'image/svg+xml')
+            f'/assetsdevhandler/story/{story.id}/assets/thumbnail/test_svg.svg',
+            'image/svg+xml',
+        )
 
     def test_exploration_assets_are_loaded(self) -> None:
         self.post_json(
@@ -99,8 +101,9 @@ class AndroidConfigTest(test_utils.GenericTestBase):
                 'image'))
         for filename in filelist:
             self.get_custom_response(
-                '/assetsdevhandler/exploration/26/assets/image/%s' %
-                filename, 'image/png')
+                f'/assetsdevhandler/exploration/26/assets/image/{filename}',
+                'image/png',
+            )
 
     def test_initialize_twice_raises_already_published_exception(self) -> None:
         self.post_json(

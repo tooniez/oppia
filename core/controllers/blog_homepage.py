@@ -192,13 +192,14 @@ class BlogHomepageDataHandler(
         """Handles GET requests."""
         assert self.normalized_request is not None
         offset = int(self.normalized_request['offset'])
-        published_post_summaries = (
-            blog_services.get_published_blog_post_summaries(offset))
-        published_post_summary_dicts = []
-        if published_post_summaries:
+        if published_post_summaries := (
+            blog_services.get_published_blog_post_summaries(offset)
+        ):
             published_post_summary_dicts = (
-                _get_blog_card_summary_dicts_for_homepage(
-                    published_post_summaries))
+                _get_blog_card_summary_dicts_for_homepage(published_post_summaries)
+            )
+        else:
+            published_post_summary_dicts = []
         # Total number of published blog posts is calculated only when we load
         # the blog home page for the first time (search offset will be 0).
         # It is not required to load other subsequent pages as the value is
@@ -207,7 +208,6 @@ class BlogHomepageDataHandler(
             self.values.update({
                 'blog_post_summary_dicts': published_post_summary_dicts,
             })
-            self.render_json(self.values)
         else:
             number_of_published_blog_post_summaries = (
                 blog_services
@@ -222,7 +222,8 @@ class BlogHomepageDataHandler(
                 'blog_post_summary_dicts': published_post_summary_dicts,
                 'list_of_default_tags': list_of_default_tags
             })
-            self.render_json(self.values)
+
+        self.render_json(self.values)
 
 
 class BlogPostDataHandler(
@@ -248,9 +249,9 @@ class BlogPostDataHandler(
             raise self.PageNotFoundException(
                 Exception(
                     'The blog post page with the given url doesn\'t exist.'))
-        user_settings = user_services.get_user_settings(
-            blog_post.author_id, strict=False)
-        if user_settings:
+        if user_settings := user_services.get_user_settings(
+            blog_post.author_id, strict=False
+        ):
             profile_picture_data_url = (
                 user_settings.profile_picture_data_url)
             author_username = user_settings.username
@@ -359,8 +360,7 @@ class AuthorsPageHandler(
         )
         if user_settings is None:
             raise Exception(
-                'No user settings found for the given author_username: %s' %
-                author_username
+                f'No user settings found for the given author_username: {author_username}'
             )
 
         author_details = blog_services.get_blog_author_details(
@@ -371,19 +371,18 @@ class AuthorsPageHandler(
                     user_settings.user_id
                 )
             )
-        blog_post_summaries = (
+        if blog_post_summaries := (
             blog_services.get_published_blog_post_summaries_by_user_id(
                 user_settings.user_id,
                 feconf.MAX_NUM_CARDS_TO_DISPLAY_ON_BLOG_AUTHOR_PROFILE_PAGE,
-                offset
+                offset,
             )
-        )
-        blog_post_summary_dicts = []
-        if blog_post_summaries:
-            blog_post_summary_dicts = (
-                _get_blog_card_summary_dicts_for_homepage(
-                    blog_post_summaries))
-
+        ):
+            blog_post_summary_dicts = _get_blog_card_summary_dicts_for_homepage(
+                blog_post_summaries
+            )
+        else:
+            blog_post_summary_dicts = []
         self.values.update({
             'author_details': author_details,
             'profile_picture_data_url': (

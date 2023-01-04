@@ -127,13 +127,10 @@ def open_file(
     Raises:
         FileNotFoundError. The file cannot be found.
     """
-    # Here we use cast because we are narrowing down the type from IO[Any]
-    # to Union[BinaryIO, TextIO].
-    file = cast(
+    return cast(
         Union[BinaryIO, TextIO],
-        open(filename, mode, encoding=encoding, newline=newline)
+        open(filename, mode, encoding=encoding, newline=newline),
     )
-    return file
 
 
 @overload
@@ -206,7 +203,6 @@ def get_exploration_components_from_dir(
             is exactly one file not in assets/, and this file has a
             .yaml suffix".
     """
-    yaml_content = None
     assets_list = []
 
     dir_path_array = dir_path.split('/')
@@ -214,11 +210,11 @@ def get_exploration_components_from_dir(
         dir_path_array = dir_path_array[:-1]
     dir_path_length = len(dir_path_array)
 
+    yaml_content = None
     for root, directories, files in os.walk(dir_path):
         for directory in directories:
             if root == dir_path and directory not in ('assets', '__pycache__'):
-                raise Exception(
-                    'The only directory in %s should be assets/' % dir_path)
+                raise Exception(f'The only directory in {dir_path} should be assets/')
 
         for filename in files:
             filepath = os.path.join(root, filename)
@@ -227,14 +223,11 @@ def get_exploration_components_from_dir(
                 # We ignore them.
                 if not filepath.endswith('.DS_Store'):
                     if yaml_content is not None:
-                        raise Exception(
-                            'More than one non-asset file specified '
-                            'for %s' % dir_path)
+                        raise Exception(f'More than one non-asset file specified for {dir_path}')
                     if not filepath.endswith('.yaml'):
                         raise Exception(
-                            'Found invalid non-asset file %s. There '
-                            'should only be a single non-asset file, '
-                            'and it should have a .yaml suffix.' % filepath)
+                            f'Found invalid non-asset file {filepath}. There should only be a single non-asset file, and it should have a .yaml suffix.'
+                        )
 
                     yaml_content = get_file_contents(filepath)
             else:
@@ -245,7 +238,7 @@ def get_exploration_components_from_dir(
                     filepath, raw_bytes=True)))
 
     if yaml_content is None:
-        raise Exception('No yaml file specifed for %s' % dir_path)
+        raise Exception(f'No yaml file specifed for {dir_path}')
 
     return yaml_content, assets_list
 
@@ -266,7 +259,7 @@ def get_comma_sep_string_from_list(items: List[str]) -> str:
     if len(items) == 1:
         return items[0]
 
-    return '%s and %s' % (', '.join(items[:-1]), items[-1])
+    return f"{', '.join(items[:-1])} and {items[-1]}"
 
 
 def to_ascii(input_string: str) -> str:
@@ -278,7 +271,7 @@ def to_ascii(input_string: str) -> str:
     Returns:
         str. String containing the ascii representation of the input string.
     """
-    normalized_string = unicodedata.normalize('NFKD', str(input_string))
+    normalized_string = unicodedata.normalize('NFKD', input_string)
     return normalized_string.encode('ascii', 'ignore').decode('ascii')
 
 
@@ -378,9 +371,7 @@ def get_random_choice(alist: List[T]) -> T:
     Returns:
         *. Random element choosen from the passed input list.
     """
-    assert isinstance(alist, list) and len(alist) > 0, (
-        'Only non-empty lists allowed'
-    )
+    assert isinstance(alist, list) and alist, 'Only non-empty lists allowed'
     index = get_random_int(len(alist))
     return alist[index]
 
@@ -431,9 +422,7 @@ def convert_png_binary_to_data_url(content: bytes) -> str:
         Exception. The given binary string does not represent a PNG image.
     """
     if imghdr.what(None, h=content) == 'png':
-        return '%s%s' % (
-            PNG_DATA_URL_PREFIX, urllib.parse.quote(base64.b64encode(content))
-        )
+        return f'{PNG_DATA_URL_PREFIX}{urllib.parse.quote(base64.b64encode(content))}'
     else:
         raise Exception('The given string does not represent a PNG image.')
 
@@ -512,8 +501,8 @@ def set_url_query_parameter(
     """
     if not isinstance(param_name, str):
         raise Exception(
-            'URL query parameter name must be a string, received %s'
-            % param_name)
+            f'URL query parameter name must be a string, received {param_name}'
+        )
 
     scheme, netloc, path, query_string, fragment = urllib.parse.urlsplit(url)
     query_params = urllib.parse.parse_qs(query_string)
@@ -558,8 +547,8 @@ def convert_to_hash(input_string: str, max_length: int) -> str:
     """
     if not isinstance(input_string, str):
         raise Exception(
-            'Expected string, received %s of type %s' %
-            (input_string, type(input_string)))
+            f'Expected string, received {input_string} of type {type(input_string)}'
+        )
 
     # Encodes strings using the character set [A-Za-z0-9].
     # Prefixing altchars with b' to ensure that all characters in encoded_string
@@ -680,22 +669,17 @@ def create_string_from_largest_unit_in_timedelta(
     """
     total_seconds = timedelta_obj.total_seconds()
     if total_seconds <= 0:
-        raise Exception(
-            'Expected a positive timedelta, received: %s.' % total_seconds)
+        raise Exception(f'Expected a positive timedelta, received: {total_seconds}.')
     if timedelta_obj.days != 0:
-        return '%s day%s' % (
-            int(timedelta_obj.days), 's' if timedelta_obj.days > 1 else '')
+        return f"{int(timedelta_obj.days)} day{'s' if timedelta_obj.days > 1 else ''}"
+    number_of_hours, remainder = divmod(total_seconds, SECONDS_IN_HOUR)
+    number_of_minutes, _ = divmod(remainder, SECONDS_IN_MINUTE)
+    if number_of_hours != 0:
+        return f"{int(number_of_hours)} hour{'s' if number_of_hours > 1 else ''}"
+    elif number_of_minutes > 1:
+        return f'{int(number_of_minutes)} minutes'
     else:
-        number_of_hours, remainder = divmod(total_seconds, SECONDS_IN_HOUR)
-        number_of_minutes, _ = divmod(remainder, SECONDS_IN_MINUTE)
-        if number_of_hours != 0:
-            return '%s hour%s' % (
-                int(number_of_hours), 's' if number_of_hours > 1 else '')
-        elif number_of_minutes > 1:
-            return '%s minutes' % int(number_of_minutes)
-        # Round any seconds up to one minute.
-        else:
-            return '1 minute'
+        return '1 minute'
 
 
 def are_datetimes_close(
@@ -783,14 +767,14 @@ def require_valid_name(
         ValidationError. Invalid character is present in name.
     """
     if not isinstance(name, str):
-        raise ValidationError('%s must be a string.' % name)
+        raise ValidationError(f'{name} must be a string.')
 
-    if allow_empty and name == '':
+    if allow_empty and not name:
         return
 
     # This check is needed because state names are used in URLs and as ids
     # for statistics, so the name length should be bounded above.
-    if len(name) > 50 or len(name) < 1:
+    if len(name) > 50 or not name:
         raise ValidationError(
             'The length of %s should be between 1 and 50 '
             'characters; received %s' % (name_type, name))
@@ -801,13 +785,12 @@ def require_valid_name(
 
     if re.search(r'\s\s+', name):
         raise ValidationError(
-            'Adjacent whitespace in %s should be collapsed.' % name_type)
+            f'Adjacent whitespace in {name_type} should be collapsed.'
+        )
 
     for character in constants.INVALID_NAME_CHARS:
         if character in name:
-            raise ValidationError(
-                r'Invalid character %s in %s: %s' %
-                (character, name_type, name))
+            raise ValidationError(f'Invalid character {character} in {name_type}: {name}')
 
 
 def require_valid_url_fragment(
@@ -828,12 +811,10 @@ def require_valid_url_fragment(
         ValidationError. Invalid character is present in the name.
     """
     if not isinstance(name, str):
-        raise ValidationError(
-            '%s field must be a string. Received %s.' % (name_type, name))
+        raise ValidationError(f'{name_type} field must be a string. Received {name}.')
 
-    if name == '':
-        raise ValidationError(
-            '%s field should not be empty.' % name_type)
+    if not name:
+        raise ValidationError(f'{name_type} field should not be empty.')
 
     if len(name) > allowed_length:
         raise ValidationError(
@@ -861,28 +842,29 @@ def require_valid_thumbnail_filename(thumbnail_filename: str) -> None:
             ValidationError. Thumbnail filename does not include an extension.
             ValidationError. Thumbnail filename extension is not svg.
         """
-    if thumbnail_filename is not None:
-        if not isinstance(thumbnail_filename, str):
-            raise ValidationError(
-                'Expected thumbnail filename to be a string, received %s'
-                % thumbnail_filename)
-        if thumbnail_filename.rfind('.') == 0:
-            raise ValidationError(
-                'Thumbnail filename should not start with a dot.')
-        if '/' in thumbnail_filename or '..' in thumbnail_filename:
-            raise ValidationError(
-                'Thumbnail filename should not include slashes or '
-                'consecutive dot characters.')
-        if '.' not in thumbnail_filename:
-            raise ValidationError(
-                'Thumbnail filename should include an extension.')
+    if thumbnail_filename is None:
+        return
+    if not isinstance(thumbnail_filename, str):
+        raise ValidationError(
+            f'Expected thumbnail filename to be a string, received {thumbnail_filename}'
+        )
+    if thumbnail_filename.rfind('.') == 0:
+        raise ValidationError(
+            'Thumbnail filename should not start with a dot.')
+    if '/' in thumbnail_filename or '..' in thumbnail_filename:
+        raise ValidationError(
+            'Thumbnail filename should not include slashes or '
+            'consecutive dot characters.')
+    if '.' not in thumbnail_filename:
+        raise ValidationError(
+            'Thumbnail filename should include an extension.')
 
-        dot_index = thumbnail_filename.rfind('.')
-        extension = thumbnail_filename[dot_index + 1:].lower()
-        if extension != 'svg':
-            raise ValidationError(
-                'Expected a filename ending in svg, received %s' %
-                thumbnail_filename)
+    dot_index = thumbnail_filename.rfind('.')
+    extension = thumbnail_filename[dot_index + 1:].lower()
+    if extension != 'svg':
+        raise ValidationError(
+            f'Expected a filename ending in svg, received {thumbnail_filename}'
+        )
 
 
 def require_valid_image_filename(image_filename: str) -> None:
@@ -901,8 +883,8 @@ def require_valid_image_filename(image_filename: str) -> None:
     if image_filename is not None:
         if not isinstance(image_filename, str):
             raise ValidationError(
-                'Expected image filename to be a string, received %s'
-                % image_filename)
+                f'Expected image filename to be a string, received {image_filename}'
+            )
         if image_filename.rfind('.') == 0:
             raise ValidationError(
                 'Image filename should not start with a dot.')
@@ -927,12 +909,12 @@ def require_valid_meta_tag_content(meta_tag_content: str) -> None:
         """
     if not isinstance(meta_tag_content, str):
         raise ValidationError(
-            'Expected meta tag content to be a string, received %s'
-            % meta_tag_content)
+            f'Expected meta tag content to be a string, received {meta_tag_content}'
+        )
     if len(meta_tag_content) > constants.MAX_CHARS_IN_META_TAG_CONTENT:
         raise ValidationError(
-            'Meta tag content should not be longer than %s characters.'
-            % constants.MAX_CHARS_IN_META_TAG_CONTENT)
+            f'Meta tag content should not be longer than {constants.MAX_CHARS_IN_META_TAG_CONTENT} characters.'
+        )
 
 
 def require_valid_page_title_fragment_for_web(
@@ -955,16 +937,15 @@ def require_valid_page_title_fragment_for_web(
 
     if not isinstance(page_title_fragment_for_web, str):
         raise ValidationError(
-            'Expected page title fragment to be a string, received %s'
-            % page_title_fragment_for_web)
+            f'Expected page title fragment to be a string, received {page_title_fragment_for_web}'
+        )
     if len(page_title_fragment_for_web) > max_chars_in_page_title_frag_for_web:
         raise ValidationError(
-            'Page title fragment should not be longer than %s characters.'
-            % constants.MAX_CHARS_IN_PAGE_TITLE_FRAGMENT_FOR_WEB)
+            f'Page title fragment should not be longer than {constants.MAX_CHARS_IN_PAGE_TITLE_FRAGMENT_FOR_WEB} characters.'
+        )
     if len(page_title_fragment_for_web) < min_chars_in_page_title_frag_for_web:
         raise ValidationError(
-            'Page title fragment should not be shorter than %s characters.'
-            % constants.MIN_CHARS_IN_PAGE_TITLE_FRAGMENT_FOR_WEB
+            f'Page title fragment should not be shorter than {constants.MIN_CHARS_IN_PAGE_TITLE_FRAGMENT_FOR_WEB} characters.'
         )
 
 
@@ -1016,7 +997,7 @@ def get_thumbnail_icon_url_for_category(category: str) -> str:
         category if category in constants.CATEGORIES_TO_COLORS
         else constants.DEFAULT_THUMBNAIL_ICON)
     # Remove all spaces from the string.
-    return '/subjects/%s.svg' % (icon_name.replace(' ', ''))
+    return f"/subjects/{icon_name.replace(' ', '')}.svg"
 
 
 def is_supported_audio_language_code(language_code: str) -> bool:
@@ -1063,7 +1044,7 @@ def get_supported_audio_language_description(language_code: str) -> str:
         if language['id'] == language_code:
             description: str = language['description']
             return description
-    raise Exception('Unsupported audio language code: %s' % language_code)
+    raise Exception(f'Unsupported audio language code: {language_code}')
 
 
 def is_user_id_valid(
@@ -1132,8 +1113,7 @@ def get_formatted_query_string(escaped_string: str) -> str:
     # Remove all punctuation from the query string, and replace it with
     # spaces. See http://stackoverflow.com/a/266162 and
     # http://stackoverflow.com/a/11693937
-    remove_punctuation_map = dict(
-        (ord(char), None) for char in string.punctuation)
+    remove_punctuation_map = {ord(char): None for char in string.punctuation}
     return query_string.translate(remove_punctuation_map)
 
 
@@ -1178,11 +1158,7 @@ def get_asset_dir_prefix() -> str:
         str. Prefix '/build' if constants.DEV_MODE is false, otherwise
         null string.
     """
-    asset_dir_prefix = ''
-    if not constants.DEV_MODE:
-        asset_dir_prefix = '/build'
-
-    return asset_dir_prefix
+    return '' if constants.DEV_MODE else '/build'
 
 
 # Here we use type Any because as mentioned in the documentation, `value` can

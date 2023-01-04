@@ -120,8 +120,7 @@ class BeamJobRunResultHandlerTests(BeamHandlerTestBase):
             run_model.id, 'o', '')
         result_model.put()
 
-        response = (
-            self.get_json('/beam_job_run_result?job_id=%s' % run_model.id))
+        response = self.get_json(f'/beam_job_run_result?job_id={run_model.id}')
 
         self.assertEqual(response, {'stdout': 'o', 'stderr': ''})
 

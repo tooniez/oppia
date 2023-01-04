@@ -187,27 +187,24 @@ class CronJobTests(test_utils.GenericTestBase):
         report_id = (
             app_feedback_report_models.AppFeedbackReportModel.generate_id(
                 'android', report_submitted_timestamp))
-        report_model = (
-            app_feedback_report_models.AppFeedbackReportModel(
-                id=report_id,
-                platform='android',
-                ticket_id='%s.%s.%s' % (
-                    'random_hash',
-                    ticket_creation_timestamp.second,
-                    '16CharString1234'),
-                submitted_on=report_submitted_timestamp,
-                local_timezone_offset_hrs=0,
-                report_type='suggestion',
-                category='other_suggestion',
-                platform_version='0.1-alpha-abcdef1234',
-                android_device_country_locale_code='in',
-                android_device_model='Pixel 4a',
-                android_sdk_version=23,
-                entry_point='navigation_drawer',
-                text_language_code='en',
-                audio_language_code='en',
-                android_report_info=android_report_info,
-                android_report_info_schema_version=1))
+        report_model = app_feedback_report_models.AppFeedbackReportModel(
+            id=report_id,
+            platform='android',
+            ticket_id=f'random_hash.{ticket_creation_timestamp.second}.16CharString1234',
+            submitted_on=report_submitted_timestamp,
+            local_timezone_offset_hrs=0,
+            report_type='suggestion',
+            category='other_suggestion',
+            platform_version='0.1-alpha-abcdef1234',
+            android_device_country_locale_code='in',
+            android_device_model='Pixel 4a',
+            android_sdk_version=23,
+            entry_point='navigation_drawer',
+            text_language_code='en',
+            audio_language_code='en',
+            android_report_info=android_report_info,
+            android_report_info_schema_version=1,
+        )
         report_model.created_on = report_timestamp
         report_model.update_timestamps(update_last_updated_time=False)
         report_model.put()

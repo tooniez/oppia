@@ -329,9 +329,7 @@ class UtilsTests(test_utils.GenericTestBase):
     ) -> None:
         timedelta_object = datetime.timedelta(days=0)
 
-        with self.assertRaisesRegex(
-            Exception, 'Expected a positive timedelta, received: %s.' % (
-                timedelta_object.total_seconds())):
+        with self.assertRaisesRegex(Exception, f'Expected a positive timedelta, received: {timedelta_object.total_seconds()}.'):
             utils.create_string_from_largest_unit_in_timedelta(timedelta_object)
 
     def test_create_string_from_largest_unit_in_timedelta_raises_for_neg_diff(
@@ -339,9 +337,7 @@ class UtilsTests(test_utils.GenericTestBase):
     ) -> None:
         timedelta_object = datetime.timedelta(days=-40)
 
-        with self.assertRaisesRegex(
-            Exception, 'Expected a positive timedelta, received: %s.' % (
-                timedelta_object.total_seconds())):
+        with self.assertRaisesRegex(Exception, f'Expected a positive timedelta, received: {timedelta_object.total_seconds()}.'):
             utils.create_string_from_largest_unit_in_timedelta(timedelta_object)
 
     def test_create_string_from_largest_unit_in_timedelta_returns_days(
@@ -499,9 +495,7 @@ class UtilsTests(test_utils.GenericTestBase):
         with self.assertRaisesRegex(Exception, invalid_type_error):
             utils.require_valid_meta_tag_content(non_string_meta_tag_content) # type: ignore[arg-type]
         lengthy_meta_tag_content = 'a' * 200
-        max_length_error = (
-            'Meta tag content should not be longer than %s characters.'
-            % constants.MAX_CHARS_IN_META_TAG_CONTENT)
+        max_length_error = f'Meta tag content should not be longer than {constants.MAX_CHARS_IN_META_TAG_CONTENT} characters.'
 
         with self.assertRaisesRegex(Exception, max_length_error):
             utils.require_valid_meta_tag_content(lengthy_meta_tag_content)
@@ -521,18 +515,14 @@ class UtilsTests(test_utils.GenericTestBase):
             utils.require_valid_page_title_fragment_for_web(
                 non_string_page_title_fragment_for_web) # type: ignore[arg-type]
         lengthy_page_title_fragment_for_web = 'a' * 60
-        max_length_error = (
-            'Page title fragment should not be longer than %s characters.'
-            % constants.MAX_CHARS_IN_PAGE_TITLE_FRAGMENT_FOR_WEB)
+        max_length_error = f'Page title fragment should not be longer than {constants.MAX_CHARS_IN_PAGE_TITLE_FRAGMENT_FOR_WEB} characters.'
 
         with self.assertRaisesRegex(Exception, max_length_error):
             utils.require_valid_page_title_fragment_for_web(
                 lengthy_page_title_fragment_for_web)
 
         short_page_title_fragment_for_web = 'name'
-        min_length_error = (
-            'Page title fragment should not be shorter than %s characters.'
-            % constants.MIN_CHARS_IN_PAGE_TITLE_FRAGMENT_FOR_WEB)
+        min_length_error = f'Page title fragment should not be shorter than {constants.MIN_CHARS_IN_PAGE_TITLE_FRAGMENT_FOR_WEB} characters.'
         with self.assertRaisesRegex(Exception, min_length_error):
             utils.require_valid_page_title_fragment_for_web(
                 short_page_title_fragment_for_web)
@@ -541,11 +531,11 @@ class UtilsTests(test_utils.GenericTestBase):
         name = 'name'
         utils.require_valid_url_fragment(name, 'name-type', 20)
 
-        name_with_spaces = 'name with spaces'
         name_with_spaces_expected_error = (
             'name-type field contains invalid characters. Only '
             'lowercase words separated by hyphens are allowed. '
             'Received name with spaces.')
+        name_with_spaces = 'name with spaces'
         with self.assertRaisesRegex(
             Exception, name_with_spaces_expected_error):
             utils.require_valid_url_fragment(
@@ -569,9 +559,7 @@ class UtilsTests(test_utils.GenericTestBase):
                 name_with_numbers, 'name-type', 20)
 
         long_name = 'a-really-really-really-lengthy-name'
-        long_name_expected_error = (
-            'name-type field should not exceed 10 characters, '
-            'received %s' % long_name)
+        long_name_expected_error = f'name-type field should not exceed 10 characters, received {long_name}'
         with self.assertRaisesRegex(Exception, long_name_expected_error):
             utils.require_valid_url_fragment(
                 long_name, 'name-type', 10)
@@ -594,8 +582,7 @@ class UtilsTests(test_utils.GenericTestBase):
         # TODO(#13059): Here we use MyPy ignore because after we fully type the
         # codebase we plan to get rid of the tests that intentionally test wrong
         # inputs that we can normally catch by typing.
-        with self.assertRaisesRegex(
-            Exception, 'Expected string, received 1 of type %s' % type(1)):
+        with self.assertRaisesRegex(Exception, f'Expected string, received 1 of type {type(1)}'):
             utils.convert_to_hash(1, 10) # type: ignore[arg-type]
 
     def test_convert_png_to_data_url_with_non_png_image_raises_error(
@@ -676,16 +663,12 @@ class UtilsTests(test_utils.GenericTestBase):
             utils.is_user_id_valid(
                 feconf.SUGGESTION_BOT_USER_ID, allow_system_user_id=True))
         self.assertTrue(
-            utils.is_user_id_valid(
-                'pid_%s' % ('a' * 32), allow_pseudonymous_id=True))
-        self.assertTrue(
-            utils.is_user_id_valid('uid_%s' % ('a' * 32)))
-        self.assertFalse(
-            utils.is_user_id_valid('pid_%s' % ('a' * 32)))
-        self.assertFalse(
-            utils.is_user_id_valid('uid_%s%s' % ('a' * 31, 'A')))
-        self.assertFalse(
-            utils.is_user_id_valid('uid_%s' % ('a' * 31)))
+            utils.is_user_id_valid(f"pid_{'a' * 32}", allow_pseudonymous_id=True)
+        )
+        self.assertTrue(utils.is_user_id_valid(f"uid_{'a' * 32}"))
+        self.assertFalse(utils.is_user_id_valid(f"pid_{'a' * 32}"))
+        self.assertFalse(utils.is_user_id_valid(f"uid_{'a' * 31}A"))
+        self.assertFalse(utils.is_user_id_valid(f"uid_{'a' * 31}"))
         self.assertFalse(utils.is_user_id_valid('a' * 36))
 
     def test_is_pseudonymous_id(self) -> None:
@@ -806,10 +789,7 @@ class UtilsTests(test_utils.GenericTestBase):
         self.assertEqual(list(others), [(1, 'INFO: bar'), (2, 'INFO: fee')])
 
     def test_convert_png_data_url_to_binary(self) -> None:
-        image_data_url = '%s%s' % (
-            utils.PNG_DATA_URL_PREFIX,
-            urllib.parse.quote(base64.b64encode(b'test123'))
-        )
+        image_data_url = f"{utils.PNG_DATA_URL_PREFIX}{urllib.parse.quote(base64.b64encode(b'test123'))}"
 
         self.assertEqual(
             utils.convert_png_data_url_to_binary(image_data_url), b'test123')
@@ -828,8 +808,7 @@ class UtilsTests(test_utils.GenericTestBase):
         self.assertEqual(utils.quoted('a"b\'c'), '"a\\"b\'c"')
 
     def test_is_base64_encoded(self) -> None:
-        image = '<svg><path d="%s" /></svg>' % (
-            'M150 0 L75 200 L225 200 Z ' * 1000)
+        image = f"""<svg><path d="{'M150 0 L75 200 L225 200 Z ' * 1000}" /></svg>"""
 
         self.assertFalse(utils.is_base64_encoded(image))
         self.assertFalse(utils.is_base64_encoded('hello'))
@@ -967,18 +946,9 @@ class UtilsTests(test_utils.GenericTestBase):
             final_result,
             (
                 yaml_content,
-                set(
-                    [
-                        (
-                            img2_path,
-                            img2_file_content),
-                        (
-                            img1_path,
-                            img1_file_content)
-                            ]
-                        )
-                    )
-                )
+                {(img2_path, img2_file_content), (img1_path, img1_file_content)},
+            ),
+        )
 
     def test_get_current_time_in_millisecs_with_current_time(self) -> None:
         time_instance1 = utils.get_current_time_in_millisecs()

@@ -60,16 +60,13 @@ class AndroidValidationConstantsTest(test_utils.GenericTestBase):
 
     def test_exploration_constants_in_both_files_are_equal(self) -> None:
         interaction_ids_in_constants = []
-        language_ids_in_constants = []
         constants_interactions_list = (
             constants.ALLOWED_EXPLORATION_IN_STORY_INTERACTION_CATEGORIES)
         constants_languages_list = (
             constants.SUPPORTED_CONTENT_LANGUAGES_FOR_ANDROID)
         for obj in constants_interactions_list:
             interaction_ids_in_constants.extend(obj['interaction_ids'])
-        for obj in constants_languages_list:
-            language_ids_in_constants.append(obj['code'])
-
+        language_ids_in_constants = [obj['code'] for obj in constants_languages_list]
         self.assertItemsEqual(
             interaction_ids_in_constants,
             android_validation_constants.VALID_INTERACTION_IDS)

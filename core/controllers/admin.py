@@ -327,8 +327,8 @@ class AdminHandler(
                         ' when the action is save_config_properties.'
                     )
                 logging.info(
-                    '[ADMIN] %s saved config property values: %s' %
-                    (self.user_id, new_config_property_values))
+                    f'[ADMIN] {self.user_id} saved config property values: {new_config_property_values}'
+                )
                 for (name, value) in new_config_property_values.items():
                     config_services.set_property(self.user_id, name, value)
             elif action == 'revert_config_property':
@@ -340,8 +340,8 @@ class AdminHandler(
                         ' when the action is revert_config_property.'
                     )
                 logging.info(
-                    '[ADMIN] %s reverted config property: %s' %
-                    (self.user_id, config_property_id))
+                    f'[ADMIN] {self.user_id} reverted config property: {config_property_id}'
+                )
                 config_services.revert_property(
                     self.user_id, config_property_id)
             elif action == 'upload_topic_similarities':
@@ -434,9 +434,7 @@ class AdminHandler(
             Exception. Cannot reload an exploration in production.
         """
         if constants.DEV_MODE:
-            logging.info(
-                '[ADMIN] %s reloaded exploration %s' %
-                (self.user_id, exploration_id))
+            logging.info(f'[ADMIN] {self.user_id} reloaded exploration {exploration_id}')
             exp_services.load_demo(exploration_id)
             rights_manager.release_ownership_of_exploration(
                 user_services.get_system_user(), exploration_id)
@@ -508,11 +506,15 @@ class AdminHandler(
                 True, [], None, None
             )
         )
-        question = question_domain.Question(
-            question_id, state,
+        return question_domain.Question(
+            question_id,
+            state,
             feconf.CURRENT_STATE_SCHEMA_VERSION,
-            constants.DEFAULT_LANGUAGE_CODE, 0, linked_skill_ids, [])
-        return question
+            constants.DEFAULT_LANGUAGE_CODE,
+            0,
+            linked_skill_ids,
+            [],
+        )
 
     def _create_dummy_skill(
         self, skill_id: str, skill_description: str, explanation: str
@@ -720,28 +722,27 @@ class AdminHandler(
             Exception. User does not have enough rights to generate data.
         """
         assert self.user_id is not None
-        if constants.DEV_MODE:
-            if feconf.ROLE_ID_CURRICULUM_ADMIN not in self.user.roles:
-                raise Exception(
-                    'User does not have enough rights to generate data.')
-            skill_id = skill_services.get_new_skill_id()
-            skill_name = 'Dummy Skill %s' % str(random.getrandbits(32))
-            skill = self._create_dummy_skill(
-                skill_id, skill_name, '<p>Dummy Explanation 1</p>')
-            skill_services.save_new_skill(self.user_id, skill)
-            for i in range(15):
-                question_id = question_services.get_new_question_id()
-                question_name = 'Question number %s %s' % (str(i), skill_name)
-                question = self._create_dummy_question(
-                    question_id, question_name, [skill_id])
-                question_services.add_question(self.user_id, question)
-                question_difficulty = list(
-                    constants.SKILL_DIFFICULTY_LABEL_TO_FLOAT.values())
-                random_difficulty = random.choice(question_difficulty)
-                question_services.create_new_question_skill_link(
-                    self.user_id, question_id, skill_id, random_difficulty)
-        else:
+        if not constants.DEV_MODE:
             raise Exception('Cannot generate dummy skills in production.')
+        if feconf.ROLE_ID_CURRICULUM_ADMIN not in self.user.roles:
+            raise Exception(
+                'User does not have enough rights to generate data.')
+        skill_id = skill_services.get_new_skill_id()
+        skill_name = f'Dummy Skill {random.getrandbits(32)}'
+        skill = self._create_dummy_skill(
+            skill_id, skill_name, '<p>Dummy Explanation 1</p>')
+        skill_services.save_new_skill(self.user_id, skill)
+        for i in range(15):
+            question_id = question_services.get_new_question_id()
+            question_name = f'Question number {str(i)} {skill_name}'
+            question = self._create_dummy_question(
+                question_id, question_name, [skill_id])
+            question_services.add_question(self.user_id, question)
+            question_difficulty = list(
+                constants.SKILL_DIFFICULTY_LABEL_TO_FLOAT.values())
+            random_difficulty = random.choice(question_difficulty)
+            question_services.create_new_question_skill_link(
+                self.user_id, question_id, skill_id, random_difficulty)
 
     def _reload_collection(self, collection_id: str) -> None:
         """Reloads the collection in dev_mode corresponding to the given
@@ -755,9 +756,7 @@ class AdminHandler(
         """
         assert self.user_id is not None
         if constants.DEV_MODE:
-            logging.info(
-                '[ADMIN] %s reloaded collection %s' %
-                (self.user_id, collection_id))
+            logging.info(f'[ADMIN] {self.user_id} reloaded collection {collection_id}')
             collection_services.load_demo(collection_id)
             rights_manager.release_ownership_of_collection(
                 user_services.get_system_user(), collection_id)
@@ -781,8 +780,8 @@ class AdminHandler(
         assert self.user_id is not None
         if constants.DEV_MODE:
             logging.info(
-                '[ADMIN] %s generated %s number of dummy explorations' %
-                (self.user_id, num_dummy_exps_to_generate))
+                f'[ADMIN] {self.user_id} generated {num_dummy_exps_to_generate} number of dummy explorations'
+            )
             possible_titles = ['Hulk Neuroscience', 'Quantum Starks',
                                'Wonder Anatomy',
                                'Elvish, language of "Lord of the Rings',

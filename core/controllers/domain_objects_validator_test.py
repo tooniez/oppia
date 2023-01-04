@@ -55,9 +55,7 @@ class ValidateSuggestionChangeTests(test_utils.GenericTestBase):
             'translation_html': '<p>In Hindi</p>',
             'data_format': 'html'
         }
-        with self.assertRaisesRegex(
-            Exception, '%s cmd is not allowed.' % incorrect_change_dict['cmd']
-        ):
+        with self.assertRaisesRegex(Exception, f"{incorrect_change_dict['cmd']} cmd is not allowed."):
             domain_objects_validator.validate_suggestion_change(
                 incorrect_change_dict)
 

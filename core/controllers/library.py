@@ -81,21 +81,22 @@ def get_matching_activity_dicts(
     exp_ids, new_search_offset = (
         exp_services.get_exploration_ids_matching_query(
             query_string, categories, language_codes, offset=search_offset))
-    activity_list: List[UnionSummaryDictType] = []
-    for collection_summary_dict in summary_services.get_displayable_collection_summary_dicts_matching_ids(  # pylint: disable=line-too-long
-        collection_ids
-    ):
-        activity_list.append(collection_summary_dict)
-    for exp_summary_dict in summary_services.get_displayable_exp_summary_dicts_matching_ids(  # pylint: disable=line-too-long
-        exp_ids
-    ):
-        activity_list.append(exp_summary_dict)
-
+    activity_list: List[UnionSummaryDictType] = list(
+        summary_services.get_displayable_collection_summary_dicts_matching_ids(  # pylint: disable=line-too-long
+            collection_ids
+        )
+    )
+    activity_list.extend(
+        iter(
+            summary_services.get_displayable_exp_summary_dicts_matching_ids(  # pylint: disable=line-too-long
+                exp_ids
+            )
+        )
+    )
     if len(activity_list) == feconf.DEFAULT_QUERY_LIMIT:
         logging.exception(
-            '%s activities were fetched to load the library page. '
-            'You may be running up against the default query limits.'
-            % feconf.DEFAULT_QUERY_LIMIT)
+            f'{feconf.DEFAULT_QUERY_LIMIT} activities were fetched to load the library page. You may be running up against the default query limits.'
+        )
     return activity_list, new_search_offset
 
 
@@ -212,19 +213,21 @@ class LibraryGroupIndexHandler(
         header_i18n_id = ''
 
         if group_name == feconf.LIBRARY_GROUP_RECENTLY_PUBLISHED:
-            recently_published_summary_dicts = (
+            if recently_published_summary_dicts := (
                 summary_services.get_recently_published_exp_summary_dicts(
-                    feconf.RECENTLY_PUBLISHED_QUERY_LIMIT_FULL_PAGE))
-            if recently_published_summary_dicts:
+                    feconf.RECENTLY_PUBLISHED_QUERY_LIMIT_FULL_PAGE
+                )
+            ):
                 activity_list = recently_published_summary_dicts
                 header_i18n_id = feconf.LIBRARY_CATEGORY_RECENTLY_PUBLISHED
 
         elif group_name == feconf.LIBRARY_GROUP_TOP_RATED:
-            top_rated_activity_summary_dicts = (
+            if top_rated_activity_summary_dicts := (
                 summary_services.get_top_rated_exploration_summary_dicts(
                     [constants.DEFAULT_LANGUAGE_CODE],
-                    feconf.NUMBER_OF_TOP_RATED_EXPLORATIONS_FULL_PAGE))
-            if top_rated_activity_summary_dicts:
+                    feconf.NUMBER_OF_TOP_RATED_EXPLORATIONS_FULL_PAGE,
+                )
+            ):
                 activity_list = top_rated_activity_summary_dicts
                 header_i18n_id = feconf.LIBRARY_CATEGORY_TOP_RATED_EXPLORATIONS
 

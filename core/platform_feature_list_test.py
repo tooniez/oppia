@@ -66,50 +66,50 @@ class PlatformFeatureListTest(test_utils.GenericTestBase):
         return [name for _, name in ENUM_MEMBER_REGEXP.findall(body)]
 
     def test_all_names_in_features_lists_exist(self) -> None:
-        missing_names = []
-        for feature in self.all_features_set:
-            if feature.value not in registry.Registry.parameter_registry:
-                missing_names.append(feature.value)
+        missing_names = [
+            feature.value
+            for feature in self.all_features_set
+            if feature.value not in registry.Registry.parameter_registry
+        ]
         self.assertTrue(
-            len(missing_names) == 0,
-            msg='Following entries in feature lists are not defined: %s.' % (
-                missing_names)
+            not missing_names,
+            msg=f'Following entries in feature lists are not defined: {missing_names}.',
         )
 
     def test_no_duplicated_names_in_features_lists(self) -> None:
-        duplicate_names = []
-        for feature in self.all_features_set:
-            if self.all_features_list.count(feature) > 1:
-                duplicate_names.append(feature.value)
+        duplicate_names = [
+            feature.value
+            for feature in self.all_features_set
+            if self.all_features_list.count(feature) > 1
+        ]
         self.assertTrue(
-            len(duplicate_names) == 0,
-            msg='Following entries appear more than once in features lists'
-            ': %s.' % (duplicate_names)
+            not duplicate_names,
+            msg=f'Following entries appear more than once in features lists: {duplicate_names}.',
         )
 
     def test_no_duplicate_names_in_deprecated_names_list(self) -> None:
-        duplicate_names = []
         deprecated_features = platform_feature_list.DEPRECATED_FEATURE_NAMES
-        for feature in set(deprecated_features):
-            if deprecated_features.count(feature) > 1:
-                duplicate_names.append(feature.value)
+        duplicate_names = [
+            feature.value
+            for feature in set(deprecated_features)
+            if deprecated_features.count(feature) > 1
+        ]
         self.assertTrue(
-            len(duplicate_names) == 0,
-            msg='Following entries appear more than once in deprecated name '
-            'list: %s.' % (duplicate_names)
+            not duplicate_names,
+            msg=f'Following entries appear more than once in deprecated name list: {duplicate_names}.',
         )
 
     def test_no_deprecated_names_in_features_lists(self) -> None:
         deprecated_names_set = set(
             platform_feature_list.DEPRECATED_FEATURE_NAMES)
-        found_deprecated_names = []
-        for feature in self.all_features_set:
-            if feature in deprecated_names_set:
-                found_deprecated_names.append(feature.value)
+        found_deprecated_names = [
+            feature.value
+            for feature in self.all_features_set
+            if feature in deprecated_names_set
+        ]
         self.assertTrue(
-            len(found_deprecated_names) == 0,
-            msg='Following names in feature lists are deprecated and should '
-            'not be used: %s.' % (found_deprecated_names)
+            not found_deprecated_names,
+            msg=f'Following names in feature lists are deprecated and should not be used: {found_deprecated_names}.',
         )
 
     def test_all_entries_in_features_lists_are_features(self) -> None:
@@ -120,9 +120,8 @@ class PlatformFeatureListTest(test_utils.GenericTestBase):
             if not feature_flag.is_feature:
                 non_feature_names.append(feature.value)
         self.assertTrue(
-            len(non_feature_names) == 0,
-            msg='Following entries in FEATURES_LIST are not features: %s.' % (
-                non_feature_names)
+            not non_feature_names,
+            msg=f'Following entries in FEATURES_LIST are not features: {non_feature_names}.',
         )
 
     def test_all_entries_in_dev_features_list_are_in_dev_stage(self) -> None:
@@ -134,9 +133,9 @@ class PlatformFeatureListTest(test_utils.GenericTestBase):
                     platform_parameter_domain.FeatureStages.DEV.value):
                 invalid_feature_names.append(feature.value)
         self.assertTrue(
-            len(invalid_feature_names) == 0,
+            not invalid_feature_names,
             msg='Following entries defined in DEV_FEATURES_LIST are not in '
-            '\'dev\' stage: %s.' % (invalid_feature_names)
+            '\'dev\' stage: %s.' % (invalid_feature_names),
         )
 
     def test_all_entries_in_test_features_list_are_in_test_stage(self) -> None:
@@ -148,9 +147,9 @@ class PlatformFeatureListTest(test_utils.GenericTestBase):
                     platform_parameter_domain.FeatureStages.TEST.value):
                 invalid_feature_names.append(feature.name)
         self.assertTrue(
-            len(invalid_feature_names) == 0,
+            not invalid_feature_names,
             msg='Following entries defined in TEST_FEATURES_LIST are not in '
-            '\'test\' stage: %s.' % (invalid_feature_names)
+            '\'test\' stage: %s.' % (invalid_feature_names),
         )
 
     def test_all_entries_in_prod_features_list_are_in_prod_stage(self) -> None:
@@ -162,9 +161,9 @@ class PlatformFeatureListTest(test_utils.GenericTestBase):
                     platform_parameter_domain.FeatureStages.PROD.value):
                 invalid_feature_names.append(feature.value)
         self.assertTrue(
-            len(invalid_feature_names) == 0,
+            not invalid_feature_names,
             msg='Following entries defined in PROD_FEATURES_LIST are not in '
-            '\'prod\' stage: %s.' % (invalid_feature_names)
+            '\'prod\' stage: %s.' % (invalid_feature_names),
         )
 
     def test_all_names_in_features_lists_exist_in_frontend(self) -> None:
@@ -175,8 +174,7 @@ class PlatformFeatureListTest(test_utils.GenericTestBase):
             set(all_feature_names_set) - set(feature_names_in_frontend))
         self.assertTrue(
             len(missing_features) == 0,
-            msg='Following entries are not defined in frontend: %s.' % (
-                list(missing_features))
+            msg=f'Following entries are not defined in frontend: {list(missing_features)}.',
         )
 
     def test_all_names_in_frontend_are_known(self) -> None:

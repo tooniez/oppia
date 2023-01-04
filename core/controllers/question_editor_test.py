@@ -463,17 +463,19 @@ class QuestionSkillLinkHandlerTest(BaseQuestionEditorControllerTests):
         self.login(self.NEW_USER_EMAIL)
         csrf_token = self.get_new_csrf_token()
         self.put_json(
-            '%s/%s' % (
-                feconf.QUESTION_SKILL_LINK_URL_PREFIX, self.question_id
-            ), {
-                'skill_ids_task_list': [{
-                    'id': 'skill_2',
-                    'task': 'update_difficulty',
-                    'difficulty': 0.9
-                }]
+            f'{feconf.QUESTION_SKILL_LINK_URL_PREFIX}/{self.question_id}',
+            {
+                'skill_ids_task_list': [
+                    {
+                        'id': 'skill_2',
+                        'task': 'update_difficulty',
+                        'difficulty': 0.9,
+                    }
+                ]
             },
             csrf_token=csrf_token,
-            expected_status_int=401)
+            expected_status_int=401,
+        )
         self.logout()
 
     def test_put_with_admin_email_allows_updation(self) -> None:
@@ -490,26 +492,28 @@ class QuestionSkillLinkHandlerTest(BaseQuestionEditorControllerTests):
         self.login(self.CURRICULUM_ADMIN_EMAIL)
         csrf_token = self.get_new_csrf_token()
         self.put_json(
-            '%s/%s' % (
-                feconf.QUESTION_SKILL_LINK_URL_PREFIX, self.question_id
-            ), {
-                'skill_ids_task_list': [{
-                    'id': self.skill_id,
-                    'task': 'update_difficulty',
-                    'difficulty': 0.9
-                }]
-            }, csrf_token=csrf_token)
+            f'{feconf.QUESTION_SKILL_LINK_URL_PREFIX}/{self.question_id}',
+            {
+                'skill_ids_task_list': [
+                    {
+                        'id': self.skill_id,
+                        'task': 'update_difficulty',
+                        'difficulty': 0.9,
+                    }
+                ]
+            },
+            csrf_token=csrf_token,
+        )
 
         self.put_json(
-            '%s/%s' % (
-                feconf.QUESTION_SKILL_LINK_URL_PREFIX, self.question_id
-            ), {
-                'skill_ids_task_list': [{
-                    'id': 'skill_2',
-                    'task': 'add',
-                    'difficulty': 0.6
-                }]
-            }, csrf_token=csrf_token)
+            f'{feconf.QUESTION_SKILL_LINK_URL_PREFIX}/{self.question_id}',
+            {
+                'skill_ids_task_list': [
+                    {'id': 'skill_2', 'task': 'add', 'difficulty': 0.6}
+                ]
+            },
+            csrf_token=csrf_token,
+        )
         (
             question_summaries, merged_question_skill_links) = (
                 question_services.get_displayable_question_skill_link_details(
@@ -520,15 +524,14 @@ class QuestionSkillLinkHandlerTest(BaseQuestionEditorControllerTests):
             merged_question_skill_links[0].skill_difficulties, [0.6, 0.9])
 
         self.put_json(
-            '%s/%s' % (
-                feconf.QUESTION_SKILL_LINK_URL_PREFIX, self.question_id
-            ), {
-                'skill_ids_task_list': [{
-                    'id': 'skill_2',
-                    'task': 'remove',
-                    'difficulty': 0
-                }]
-            }, csrf_token=csrf_token)
+            f'{feconf.QUESTION_SKILL_LINK_URL_PREFIX}/{self.question_id}',
+            {
+                'skill_ids_task_list': [
+                    {'id': 'skill_2', 'task': 'remove', 'difficulty': 0}
+                ]
+            },
+            csrf_token=csrf_token,
+        )
         question_summaries, _, = (
             question_services.get_displayable_question_skill_link_details(
                 5, ['skill_2'], 0))
@@ -539,43 +542,39 @@ class QuestionSkillLinkHandlerTest(BaseQuestionEditorControllerTests):
         self.login(self.CURRICULUM_ADMIN_EMAIL)
         csrf_token = self.get_new_csrf_token()
         self.put_json(
-            '%s/%s' % (
-                feconf.QUESTION_SKILL_LINK_URL_PREFIX, self.question_id
-            ), {
-                'skill_ids_task_list': [{
-                    'task': 'update_difficulty',
-                    'difficulty': 0.9
-                }]
-            }, csrf_token=csrf_token, expected_status_int=400)
+            f'{feconf.QUESTION_SKILL_LINK_URL_PREFIX}/{self.question_id}',
+            {
+                'skill_ids_task_list': [
+                    {'task': 'update_difficulty', 'difficulty': 0.9}
+                ]
+            },
+            csrf_token=csrf_token,
+            expected_status_int=400,
+        )
         self.put_json(
-            '%s/%s' % (
-                feconf.QUESTION_SKILL_LINK_URL_PREFIX, self.question_id
-            ), {
-                'skill_ids_task_list': {
-                    'task': 'invalid_task'
-                }
-            }, csrf_token=csrf_token, expected_status_int=400)
+            f'{feconf.QUESTION_SKILL_LINK_URL_PREFIX}/{self.question_id}',
+            {'skill_ids_task_list': {'task': 'invalid_task'}},
+            csrf_token=csrf_token,
+            expected_status_int=400,
+        )
         self.put_json(
-            '%s/%s' % (
-                feconf.QUESTION_SKILL_LINK_URL_PREFIX, self.question_id
-            ), {}, csrf_token=csrf_token, expected_status_int=400)
+            f'{feconf.QUESTION_SKILL_LINK_URL_PREFIX}/{self.question_id}',
+            {},
+            csrf_token=csrf_token,
+            expected_status_int=400,
+        )
         self.put_json(
-            '%s/%s' % (
-                feconf.QUESTION_SKILL_LINK_URL_PREFIX, self.question_id
-            ), {
-                'skill_ids_task_list': [{
-                    'id': 'skill_2',
-                    'task': 'invalid'
-                }]
-            }, csrf_token=csrf_token, expected_status_int=400)
+            f'{feconf.QUESTION_SKILL_LINK_URL_PREFIX}/{self.question_id}',
+            {'skill_ids_task_list': [{'id': 'skill_2', 'task': 'invalid'}]},
+            csrf_token=csrf_token,
+            expected_status_int=400,
+        )
         self.put_json(
-            '%s/%s' % (
-                feconf.QUESTION_SKILL_LINK_URL_PREFIX, self.question_id
-            ), {
-                'skill_ids_task_list': [{
-                    'task': 'add'
-                }]
-            }, csrf_token=csrf_token, expected_status_int=400)
+            f'{feconf.QUESTION_SKILL_LINK_URL_PREFIX}/{self.question_id}',
+            {'skill_ids_task_list': [{'task': 'add'}]},
+            csrf_token=csrf_token,
+            expected_status_int=400,
+        )
         self.logout()
 
     def test_put_with_topic_manager_email_allows_updation(self) -> None:
@@ -585,15 +584,18 @@ class QuestionSkillLinkHandlerTest(BaseQuestionEditorControllerTests):
         self.login(self.TOPIC_MANAGER_EMAIL)
         csrf_token = self.get_new_csrf_token()
         self.put_json(
-            '%s/%s' % (
-                feconf.QUESTION_SKILL_LINK_URL_PREFIX, self.question_id
-            ), {
-                'skill_ids_task_list': [{
-                    'id': self.skill_id,
-                    'task': 'update_difficulty',
-                    'difficulty': 0.6
-                }]
-            }, csrf_token=csrf_token)
+            f'{feconf.QUESTION_SKILL_LINK_URL_PREFIX}/{self.question_id}',
+            {
+                'skill_ids_task_list': [
+                    {
+                        'id': self.skill_id,
+                        'task': 'update_difficulty',
+                        'difficulty': 0.6,
+                    }
+                ]
+            },
+            csrf_token=csrf_token,
+        )
         (
             question_summaries, merged_question_skill_links) = (
                 question_services.get_displayable_question_skill_link_details(
@@ -611,16 +613,16 @@ class EditableQuestionDataHandlerTest(BaseQuestionEditorControllerTests):
     def test_get_can_not_access_handler_with_invalid_question_id(self) -> None:
         self.login(self.CURRICULUM_ADMIN_EMAIL)
         self.get_json(
-            '%s/%s' % (
-                feconf.QUESTION_EDITOR_DATA_URL_PREFIX, 'invalid_question_id'),
-            expected_status_int=400)
+            f'{feconf.QUESTION_EDITOR_DATA_URL_PREFIX}/invalid_question_id',
+            expected_status_int=400,
+        )
         self.logout()
 
     def test_delete_with_guest_does_not_allow_question_deletion(self) -> None:
         response = self.delete_json(
-            '%s/%s' % (
-                feconf.QUESTION_EDITOR_DATA_URL_PREFIX, self.question_id),
-            expected_status_int=401)
+            f'{feconf.QUESTION_EDITOR_DATA_URL_PREFIX}/{self.question_id}',
+            expected_status_int=401,
+        )
         self.assertEqual(
             response['error'],
             'You must be logged in to access this resource.')
@@ -630,9 +632,9 @@ class EditableQuestionDataHandlerTest(BaseQuestionEditorControllerTests):
     ) -> None:
         self.login(self.NEW_USER_EMAIL)
         response = self.delete_json(
-            '%s/%s' % (
-                feconf.QUESTION_EDITOR_DATA_URL_PREFIX, self.question_id),
-            expected_status_int=401)
+            f'{feconf.QUESTION_EDITOR_DATA_URL_PREFIX}/{self.question_id}',
+            expected_status_int=401,
+        )
         self.assertIn(
             'does not have enough rights to delete the question.',
             response['error'])
@@ -643,15 +645,16 @@ class EditableQuestionDataHandlerTest(BaseQuestionEditorControllerTests):
     ) -> None:
         self.login(self.NEW_USER_EMAIL)
         self.get_json(
-            '%s/%s' % (
-                feconf.QUESTION_EDITOR_DATA_URL_PREFIX, self.question_id),
-            expected_status_int=401)
+            f'{feconf.QUESTION_EDITOR_DATA_URL_PREFIX}/{self.question_id}',
+            expected_status_int=401,
+        )
         self.logout()
 
     def test_get_with_admin_email_allows_question_fetching(self) -> None:
         self.login(self.CURRICULUM_ADMIN_EMAIL)
-        response_dict = self.get_json('%s/%s' % (
-            feconf.QUESTION_EDITOR_DATA_URL_PREFIX, self.question_id))
+        response_dict = self.get_json(
+            f'{feconf.QUESTION_EDITOR_DATA_URL_PREFIX}/{self.question_id}'
+        )
         self.assertEqual(
             response_dict['question_dict']['id'], self.question_id)
         self.assertEqual(
@@ -670,8 +673,9 @@ class EditableQuestionDataHandlerTest(BaseQuestionEditorControllerTests):
         self
     ) -> None:
         self.login(self.TOPIC_MANAGER_EMAIL)
-        response_dict = self.get_json('%s/%s' % (
-            feconf.QUESTION_EDITOR_DATA_URL_PREFIX, self.question_id))
+        response_dict = self.get_json(
+            f'{feconf.QUESTION_EDITOR_DATA_URL_PREFIX}/{self.question_id}'
+        )
         self.assertEqual(
             response_dict['question_dict']['id'], self.question_id)
         self.assertEqual(
@@ -699,26 +703,26 @@ class EditableQuestionDataHandlerTest(BaseQuestionEditorControllerTests):
         with question_services_swap:
             self.login(self.EDITOR_EMAIL)
             self.get_json(
-                '%s/%s' % (
-                    feconf.QUESTION_EDITOR_DATA_URL_PREFIX,
-                    self.question_id), expected_status_int=404)
+                f'{feconf.QUESTION_EDITOR_DATA_URL_PREFIX}/{self.question_id}',
+                expected_status_int=404,
+            )
 
             self.logout()
 
     def test_delete_with_incorrect_question_id_returns_404_status(self) -> None:
         self.login(self.CURRICULUM_ADMIN_EMAIL)
         self.delete_json(
-            '%s/%s' % (
-                feconf.QUESTION_EDITOR_DATA_URL_PREFIX, 'abc123456789'),
-            expected_status_int=404)
+            f'{feconf.QUESTION_EDITOR_DATA_URL_PREFIX}/abc123456789',
+            expected_status_int=404,
+        )
         self.logout()
 
     def test_delete_with_admin_email_allows_question_deletion(self) -> None:
         self.login(self.CURRICULUM_ADMIN_EMAIL)
         self.delete_json(
-            '%s/%s' % (
-                feconf.QUESTION_EDITOR_DATA_URL_PREFIX, self.question_id),
-            expected_status_int=200)
+            f'{feconf.QUESTION_EDITOR_DATA_URL_PREFIX}/{self.question_id}',
+            expected_status_int=200,
+        )
         self.logout()
 
     def test_put_with_long_commit_message_fails(self) -> None:
@@ -737,10 +741,11 @@ class EditableQuestionDataHandlerTest(BaseQuestionEditorControllerTests):
         self.login(self.CURRICULUM_ADMIN_EMAIL)
         csrf_token = self.get_new_csrf_token()
         response_json = self.put_json(
-            '%s/%s' % (
-                feconf.QUESTION_EDITOR_DATA_URL_PREFIX, self.question_id),
+            f'{feconf.QUESTION_EDITOR_DATA_URL_PREFIX}/{self.question_id}',
             payload,
-            csrf_token=csrf_token, expected_status_int=400)
+            csrf_token=csrf_token,
+            expected_status_int=400,
+        )
         max_len_object = 'a' * 376
         self.assertEqual(
             response_json['error'],
@@ -765,10 +770,10 @@ class EditableQuestionDataHandlerTest(BaseQuestionEditorControllerTests):
         self.login(self.CURRICULUM_ADMIN_EMAIL)
         csrf_token = self.get_new_csrf_token()
         response_json = self.put_json(
-            '%s/%s' % (
-                feconf.QUESTION_EDITOR_DATA_URL_PREFIX, self.question_id),
+            f'{feconf.QUESTION_EDITOR_DATA_URL_PREFIX}/{self.question_id}',
             payload,
-            csrf_token=csrf_token)
+            csrf_token=csrf_token,
+        )
         self.assertEqual(
             response_json['question_dict']['language_code'], 'en')
         self.assertEqual(
@@ -778,17 +783,19 @@ class EditableQuestionDataHandlerTest(BaseQuestionEditorControllerTests):
             response_json['question_dict']['id'], self.question_id)
         del payload['change_list']
         self.put_json(
-            '%s/%s' % (
-                feconf.QUESTION_EDITOR_DATA_URL_PREFIX,
-                self.question_id), payload,
-            csrf_token=csrf_token, expected_status_int=400)
+            f'{feconf.QUESTION_EDITOR_DATA_URL_PREFIX}/{self.question_id}',
+            payload,
+            csrf_token=csrf_token,
+            expected_status_int=400,
+        )
         del payload['commit_message']
         payload['change_list'] = change_list
         self.put_json(
-            '%s/%s' % (
-                feconf.QUESTION_EDITOR_DATA_URL_PREFIX,
-                self.question_id), payload,
-            csrf_token=csrf_token, expected_status_int=400)
+            f'{feconf.QUESTION_EDITOR_DATA_URL_PREFIX}/{self.question_id}',
+            payload,
+            csrf_token=csrf_token,
+            expected_status_int=400,
+        )
         payload['commit_message'] = 'update question data'
         self.put_json(
             feconf.QUESTION_EDITOR_DATA_URL_PREFIX, payload,
@@ -820,9 +827,10 @@ class EditableQuestionDataHandlerTest(BaseQuestionEditorControllerTests):
         payload['change_list'] = change_list
         payload['commit_message'] = 'update question data'
         response_json = self.put_json(
-            '%s/%s' % (
-                feconf.QUESTION_EDITOR_DATA_URL_PREFIX, self.question_id),
-            payload, csrf_token=csrf_token)
+            f'{feconf.QUESTION_EDITOR_DATA_URL_PREFIX}/{self.question_id}',
+            payload,
+            csrf_token=csrf_token,
+        )
 
         self.assertEqual(
             response_json['question_dict']['language_code'], 'en')
@@ -849,8 +857,9 @@ class EditableQuestionDataHandlerTest(BaseQuestionEditorControllerTests):
         self.login(self.CURRICULUM_ADMIN_EMAIL)
         csrf_token = self.get_new_csrf_token()
         self.put_json(
-            '%s/%s' % (
-                feconf.QUESTION_EDITOR_DATA_URL_PREFIX, self.question_id),
+            f'{feconf.QUESTION_EDITOR_DATA_URL_PREFIX}/{self.question_id}',
             payload,
-            csrf_token=csrf_token, expected_status_int=400)
+            csrf_token=csrf_token,
+            expected_status_int=400,
+        )
         self.logout()

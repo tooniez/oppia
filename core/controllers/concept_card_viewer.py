@@ -50,10 +50,7 @@ class ConceptCardDataHandler(
 
         skills = skill_fetchers.get_multi_skills(selected_skill_ids)
 
-        concept_card_dicts = []
-        for skill in skills:
-            concept_card_dicts.append(skill.skill_contents.to_dict())
-
+        concept_card_dicts = [skill.skill_contents.to_dict() for skill in skills]
         self.values.update({
             'concept_card_dicts': concept_card_dicts
         })

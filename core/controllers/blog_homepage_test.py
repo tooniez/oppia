@@ -59,9 +59,7 @@ class BlogHomepageDataHandlerTest(test_utils.GenericTestBase):
 
     def test_get_blog_homepage_data(self) -> None:
         self.login(self.user_email)
-        json_response = self.get_json(
-            '%s?offset=0' % (feconf.BLOG_HOMEPAGE_DATA_URL),
-            )
+        json_response = self.get_json(f'{feconf.BLOG_HOMEPAGE_DATA_URL}?offset=0')
         default_tags = config_domain.Registry.get_config_property(
             'list_of_default_tags_for_blog_post', strict=True
         ).value
@@ -83,8 +81,7 @@ class BlogHomepageDataHandlerTest(test_utils.GenericTestBase):
         }
         blog_services.update_blog_post(blog_post_two.id, change_dict_two)
         blog_services.publish_blog_post(blog_post_two.id)
-        json_response = self.get_json(
-            '%s?offset=0' % feconf.BLOG_HOMEPAGE_DATA_URL)
+        json_response = self.get_json(f'{feconf.BLOG_HOMEPAGE_DATA_URL}?offset=0')
         self.assertEqual(
             len(json_response['blog_post_summary_dicts']), 2)
         self.assertEqual(json_response['no_of_blog_post_summaries'], 2)
@@ -97,9 +94,7 @@ class BlogHomepageDataHandlerTest(test_utils.GenericTestBase):
             'Sample Title Two'
         )
 
-        json_response = self.get_json(
-            '%s?offset=1' % feconf.BLOG_HOMEPAGE_DATA_URL
-        )
+        json_response = self.get_json(f'{feconf.BLOG_HOMEPAGE_DATA_URL}?offset=1')
         self.assertEqual(
             len(json_response['blog_post_summary_dicts']), 1)
         self.assertEqual(
@@ -128,9 +123,7 @@ class BlogHomepageDataHandlerTest(test_utils.GenericTestBase):
         blog_admin_model.put()
 
         self.login(self.user_email)
-        json_response = self.get_json(
-            '%s?offset=0' % (feconf.BLOG_HOMEPAGE_DATA_URL),
-            )
+        json_response = self.get_json(f'{feconf.BLOG_HOMEPAGE_DATA_URL}?offset=0')
         self.assertEqual(
             len(json_response['blog_post_summary_dicts']), 1)
         self.assertEqual(json_response['no_of_blog_post_summaries'], 1)
@@ -181,8 +174,8 @@ class BlogPostDataHandlerTest(test_utils.GenericTestBase):
         self.login(self.user_email)
         blog_post = blog_services.get_blog_post_by_id(self.blog_post_one.id)
         json_response = self.get_json(
-            '%s/%s' % (feconf.BLOG_HOMEPAGE_DATA_URL, blog_post.url_fragment),
-            )
+            f'{feconf.BLOG_HOMEPAGE_DATA_URL}/{blog_post.url_fragment}'
+        )
         self.assertEqual(
             'new author name',
             json_response['blog_post_dict']['displayed_author_name']
@@ -207,9 +200,8 @@ class BlogPostDataHandlerTest(test_utils.GenericTestBase):
         blog_services.publish_blog_post(blog_post_two_id)
         blog_post_two = blog_services.get_blog_post_by_id(blog_post_two_id)
         json_response = self.get_json(
-            '%s/%s' % (
-                feconf.BLOG_HOMEPAGE_DATA_URL, blog_post_two.url_fragment),
-            )
+            f'{feconf.BLOG_HOMEPAGE_DATA_URL}/{blog_post_two.url_fragment}'
+        )
         self.assertEqual(
             'new author name',
             json_response['blog_post_dict']['displayed_author_name']
@@ -229,9 +221,8 @@ class BlogPostDataHandlerTest(test_utils.GenericTestBase):
         blog_admin_model.update_timestamps()
         blog_admin_model.put()
         json_response = self.get_json(
-            '%s/%s' % (
-                feconf.BLOG_HOMEPAGE_DATA_URL, blog_post_two.url_fragment),
-            )
+            f'{feconf.BLOG_HOMEPAGE_DATA_URL}/{blog_post_two.url_fragment}'
+        )
         self.assertEqual(
             'new author name',
             json_response['blog_post_dict']['displayed_author_name']
@@ -289,8 +280,8 @@ class BlogPostDataHandlerTest(test_utils.GenericTestBase):
         blog_post_four = blog_services.get_blog_post_by_id(blog_post_four_id)
 
         json_response = self.get_json(
-            '%s/%s' % (feconf.BLOG_HOMEPAGE_DATA_URL, blog_post.url_fragment),
-            )
+            f'{feconf.BLOG_HOMEPAGE_DATA_URL}/{blog_post.url_fragment}'
+        )
         self.assertEqual(len(json_response['summary_dicts']), 2)
         self.assertEqual(
             json_response['summary_dicts'][0]['id'], blog_post_two_id)
@@ -298,10 +289,8 @@ class BlogPostDataHandlerTest(test_utils.GenericTestBase):
             json_response['summary_dicts'][1]['id'], blog_post_four_id)
 
         json_response = self.get_json(
-            '%s/%s' % (
-                feconf.BLOG_HOMEPAGE_DATA_URL,
-                blog_post_four.url_fragment
-            ))
+            f'{feconf.BLOG_HOMEPAGE_DATA_URL}/{blog_post_four.url_fragment}'
+        )
         self.assertEqual(len(json_response['summary_dicts']), 2)
         self.assertEqual(
             json_response['summary_dicts'][0]['id'], blog_post_three_id)
@@ -309,10 +298,8 @@ class BlogPostDataHandlerTest(test_utils.GenericTestBase):
             json_response['summary_dicts'][1]['id'], blog_post_two_id)
 
         json_response = self.get_json(
-            '%s/%s' % (
-                feconf.BLOG_HOMEPAGE_DATA_URL,
-                blog_post_three.url_fragment
-            ))
+            f'{feconf.BLOG_HOMEPAGE_DATA_URL}/{blog_post_three.url_fragment}'
+        )
         self.assertEqual(len(json_response['summary_dicts']), 2)
         self.assertEqual(
             json_response['summary_dicts'][0]['id'], blog_post_four_id)
@@ -320,10 +307,8 @@ class BlogPostDataHandlerTest(test_utils.GenericTestBase):
             json_response['summary_dicts'][1]['id'], blog_post_two_id)
 
         json_response = self.get_json(
-            '%s/%s' % (
-                feconf.BLOG_HOMEPAGE_DATA_URL,
-                blog_post_three.url_fragment
-            ))
+            f'{feconf.BLOG_HOMEPAGE_DATA_URL}/{blog_post_three.url_fragment}'
+        )
         self.assertEqual(len(json_response['summary_dicts']), 2)
         self.assertEqual(
             json_response['summary_dicts'][0]['id'], blog_post_four_id)
@@ -333,13 +318,11 @@ class BlogPostDataHandlerTest(test_utils.GenericTestBase):
     def test_raise_exception_if_blog_post_does_not_exists(self) -> None:
         self.login(self.user_email)
         blog_post = blog_services.get_blog_post_by_id(self.blog_post_one.id)
-        self.get_json(
-            '%s/%s' % (feconf.BLOG_HOMEPAGE_DATA_URL, blog_post.url_fragment),
-        )
+        self.get_json(f'{feconf.BLOG_HOMEPAGE_DATA_URL}/{blog_post.url_fragment}')
         blog_services.delete_blog_post(blog_post.id)
         self.get_json(
-            '%s/%s' % (feconf.BLOG_HOMEPAGE_DATA_URL, blog_post.url_fragment),
-            expected_status_int=404
+            f'{feconf.BLOG_HOMEPAGE_DATA_URL}/{blog_post.url_fragment}',
+            expected_status_int=404,
         )
 
 
@@ -376,10 +359,8 @@ class AuthorsPageHandlerTest(test_utils.GenericTestBase):
     def test_get_authors_page_data(self) -> None:
         self.login(self.user_email)
         json_response = self.get_json(
-            '%s/%s?offset=0' % (
-                feconf.BLOG_AUTHOR_PROFILE_PAGE_DATA_URL_PREFIX,
-                self.BLOG_ADMIN_USERNAME),
-            )
+            f'{feconf.BLOG_AUTHOR_PROFILE_PAGE_DATA_URL_PREFIX}/{self.BLOG_ADMIN_USERNAME}?offset=0'
+        )
         self.assertEqual(
             self.BLOG_ADMIN_USERNAME,
             json_response['summary_dicts'][0]['author_username'])
@@ -393,19 +374,14 @@ class AuthorsPageHandlerTest(test_utils.GenericTestBase):
 
         blog_services.unpublish_blog_post(self.blog_post.id)
         json_response = self.get_json(
-            '%s/%s?offset=0' % (
-                feconf.BLOG_AUTHOR_PROFILE_PAGE_DATA_URL_PREFIX,
-                self.BLOG_ADMIN_USERNAME),
-            )
+            f'{feconf.BLOG_AUTHOR_PROFILE_PAGE_DATA_URL_PREFIX}/{self.BLOG_ADMIN_USERNAME}?offset=0'
+        )
         self.assertEqual(json_response['summary_dicts'], [])
 
     def test_invalid_author_username_raises_error(self) -> None:
         json_response = self.get_json(
-            '%s/%s?offset=0' % (
-                feconf.BLOG_AUTHOR_PROFILE_PAGE_DATA_URL_PREFIX,
-                'Invalid_author_username'
-            ),
-            expected_status_int=500
+            f'{feconf.BLOG_AUTHOR_PROFILE_PAGE_DATA_URL_PREFIX}/Invalid_author_username?offset=0',
+            expected_status_int=500,
         )
         self.assertEqual(
             json_response['error'],

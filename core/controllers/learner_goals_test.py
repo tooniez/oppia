@@ -105,22 +105,20 @@ class LearnerGoalsHandlerTests(test_utils.GenericTestBase):
 
         # Add one topic to the learner goal.
         self.post_json(
-            '%s/%s/%s' % (
-                feconf.LEARNER_GOALS_DATA_URL,
-                constants.ACTIVITY_TYPE_LEARN_TOPIC,
-                self.TOPIC_ID_1), {},
-            csrf_token=csrf_token)
+            f'{feconf.LEARNER_GOALS_DATA_URL}/{constants.ACTIVITY_TYPE_LEARN_TOPIC}/{self.TOPIC_ID_1}',
+            {},
+            csrf_token=csrf_token,
+        )
         self.assertEqual(
             learner_goals_services.get_all_topic_ids_to_learn(
                 self.viewer_id), [self.TOPIC_ID_1])
 
         # Add another topic.
         self.post_json(
-            '%s/%s/%s' % (
-                feconf.LEARNER_GOALS_DATA_URL,
-                constants.ACTIVITY_TYPE_LEARN_TOPIC,
-                self.TOPIC_ID_2), {},
-            csrf_token=csrf_token)
+            f'{feconf.LEARNER_GOALS_DATA_URL}/{constants.ACTIVITY_TYPE_LEARN_TOPIC}/{self.TOPIC_ID_2}',
+            {},
+            csrf_token=csrf_token,
+        )
         self.assertEqual(
             learner_goals_services.get_all_topic_ids_to_learn(
                 self.viewer_id), [self.TOPIC_ID_1, self.TOPIC_ID_2])
@@ -129,11 +127,10 @@ class LearnerGoalsHandlerTests(test_utils.GenericTestBase):
         learner_progress_services.mark_topic_as_learnt(
             self.viewer_id, self.TOPIC_ID_3)
         response = self.post_json(
-            '%s/%s/%s' % (
-                feconf.LEARNER_GOALS_DATA_URL,
-                constants.ACTIVITY_TYPE_LEARN_TOPIC,
-                self.TOPIC_ID_3), {},
-            csrf_token=csrf_token)
+            f'{feconf.LEARNER_GOALS_DATA_URL}/{constants.ACTIVITY_TYPE_LEARN_TOPIC}/{self.TOPIC_ID_3}',
+            {},
+            csrf_token=csrf_token,
+        )
         self.assertEqual(
             response['belongs_to_learnt_list'], True)
         self.assertEqual(
@@ -142,12 +139,11 @@ class LearnerGoalsHandlerTests(test_utils.GenericTestBase):
 
         # Fail to add one topic to the learner goal.
         response = self.post_json(
-            '%s/%s/%s' % (
-                feconf.LEARNER_GOALS_DATA_URL,
-                'InvalidActivityType',
-                self.TOPIC_ID_1), {},
+            f'{feconf.LEARNER_GOALS_DATA_URL}/InvalidActivityType/{self.TOPIC_ID_1}',
+            {},
             csrf_token=csrf_token,
-            expected_status_int=400)
+            expected_status_int=400,
+        )
         self.assertIn(
             'Received InvalidActivityType which is not in the allowed '
             'range of choices: [\'learntopic\']',
@@ -160,21 +156,18 @@ class LearnerGoalsHandlerTests(test_utils.GenericTestBase):
         # the maximum limit.
         for topic_id in range(2, feconf.MAX_CURRENT_GOALS_COUNT + 1):
             self.post_json(
-                '%s/%s/%s' % (
-                    feconf.LEARNER_GOALS_DATA_URL,
-                    constants.ACTIVITY_TYPE_LEARN_TOPIC,
-                    'topic_id_%s' % topic_id), {},
-                csrf_token=csrf_token)
+                f'{feconf.LEARNER_GOALS_DATA_URL}/{constants.ACTIVITY_TYPE_LEARN_TOPIC}/topic_id_{topic_id}',
+                {},
+                csrf_token=csrf_token,
+            )
 
         # Now if we try and add a topic we should get a message saying we
         # are exceeding the limit.
         response = self.post_json(
-            '%s/%s/%s' % (
-                feconf.LEARNER_GOALS_DATA_URL,
-                constants.ACTIVITY_TYPE_LEARN_TOPIC,
-                'topic_id_%s' %
-                str(feconf.MAX_CURRENT_GOALS_COUNT + 3)),
-            {}, csrf_token=csrf_token)
+            f'{feconf.LEARNER_GOALS_DATA_URL}/{constants.ACTIVITY_TYPE_LEARN_TOPIC}/topic_id_{str(feconf.MAX_CURRENT_GOALS_COUNT + 3)}',
+            {},
+            csrf_token=csrf_token,
+        )
         self.assertEqual(response['goals_limit_exceeded'], True)
 
         self.logout()
@@ -194,36 +187,32 @@ class LearnerGoalsHandlerTests(test_utils.GenericTestBase):
 
         # Remove an topic.
         self.delete_json(
-            '%s/%s/%s' % (
-                feconf.LEARNER_GOALS_DATA_URL,
-                constants.ACTIVITY_TYPE_LEARN_TOPIC,
-                self.TOPIC_ID_1))
+            f'{feconf.LEARNER_GOALS_DATA_URL}/{constants.ACTIVITY_TYPE_LEARN_TOPIC}/{self.TOPIC_ID_1}'
+        )
         self.assertEqual(
             learner_goals_services.get_all_topic_ids_to_learn(
                 self.viewer_id), [self.TOPIC_ID_2])
 
         # Remove the second topic.
-        self.delete_json('%s/%s/%s' % (
-            feconf.LEARNER_GOALS_DATA_URL,
-            constants.ACTIVITY_TYPE_LEARN_TOPIC,
-            self.TOPIC_ID_2))
+        self.delete_json(
+            f'{feconf.LEARNER_GOALS_DATA_URL}/{constants.ACTIVITY_TYPE_LEARN_TOPIC}/{self.TOPIC_ID_2}'
+        )
         self.assertEqual(
             learner_goals_services.get_all_topic_ids_to_learn(
                 self.viewer_id), [])
 
         # Add one topic to the learner goal.
         self.post_json(
-            '%s/%s/%s' % (
-                feconf.LEARNER_GOALS_DATA_URL,
-                constants.ACTIVITY_TYPE_LEARN_TOPIC,
-                self.TOPIC_ID_1), {},
-            csrf_token=csrf_token)
+            f'{feconf.LEARNER_GOALS_DATA_URL}/{constants.ACTIVITY_TYPE_LEARN_TOPIC}/{self.TOPIC_ID_1}',
+            {},
+            csrf_token=csrf_token,
+        )
 
         # Fail to delete one topic from learner goals.
-        response = self.delete_json('%s/%s/%s' % (
-            feconf.LEARNER_GOALS_DATA_URL,
-            'InvalidActivityType',
-            self.TOPIC_ID_1), expected_status_int=400)
+        response = self.delete_json(
+            f'{feconf.LEARNER_GOALS_DATA_URL}/InvalidActivityType/{self.TOPIC_ID_1}',
+            expected_status_int=400,
+        )
         self.assertIn(
             'Received InvalidActivityType which is not in the allowed '
             'range of choices: [\'learntopic\']',

@@ -48,19 +48,17 @@ class ProfilePageTests(test_utils.GenericTestBase):
 
     def test_get_profile_page_of_existing_user(self) -> None:
         self.signup(self.OWNER_EMAIL, self.OWNER_USERNAME)
-        response = self.get_html_response('/profile/%s' % self.OWNER_USERNAME)
+        response = self.get_html_response(f'/profile/{self.OWNER_USERNAME}')
         self.assertIn(b'<oppia-root></oppia-root>', response.body)
 
     def test_page_not_found(self) -> None:
-        message = 'Could not find the page {}/profilehandler/data/{}.'.format(
-            'http://localhost', self.EDITOR_USERNAME
-        )
+        message = f'Could not find the page http://localhost/profilehandler/data/{self.EDITOR_USERNAME}.'
         error = {
             'error': message, 'status_code': 404
         }
         with self.swap_to_always_return(
-            user_services, 'get_user_settings_from_username', False
-        ):
+                user_services, 'get_user_settings_from_username', False
+            ):
             self.signup(self.EDITOR_EMAIL, self.EDITOR_USERNAME)
             self.login(self.EDITOR_EMAIL)
             csrf_token = self.get_new_csrf_token()
@@ -84,25 +82,24 @@ class ProfilePageTests(test_utils.GenericTestBase):
             self.signup(self.VIEWER_EMAIL, self.VIEWER_USERNAME)
             self.login(self.VIEWER_EMAIL)
             response = self.get_json(
-                '/profilehandler/data/%s' % self.EDITOR_USERNAME,
-                expected_status_int=404
+                f'/profilehandler/data/{self.EDITOR_USERNAME}',
+                expected_status_int=404,
             )
             self.assertEqual(response, error)
             self.logout()
             response = self.get_json(
-                '/profilehandler/data/%s' % self.EDITOR_USERNAME,
-                expected_status_int=404
+                f'/profilehandler/data/{self.EDITOR_USERNAME}',
+                expected_status_int=404,
             )
             self.assertEqual(response, error)
 
     def test_user_does_have_fully_registered_account(self) -> None:
         with self.swap_to_always_return(
-            user_services, 'has_fully_registered_account', True
-        ):
+                user_services, 'has_fully_registered_account', True
+            ):
             self.login(self.EDITOR_EMAIL)
             self.get_html_response(
-                feconf.SIGNUP_URL + '?return_url=/',
-                expected_status_int=302
+                f'{feconf.SIGNUP_URL}?return_url=/', expected_status_int=302
             )
             csrf_token = self.get_new_csrf_token()
             response = self.post_json(
@@ -191,23 +188,20 @@ class ProfileDataHandlerTests(test_utils.GenericTestBase):
 
         # Viewer looks at editor's profile page.
         self.login(self.VIEWER_EMAIL)
-        response = self.get_json(
-            '/profilehandler/data/%s' % self.EDITOR_USERNAME)
+        response = self.get_json(f'/profilehandler/data/{self.EDITOR_USERNAME}')
         self.assertEqual(response['user_bio'], 'My new editor bio')
         self.assertEqual(response['subject_interests'], ['editor', 'editing'])
         self.logout()
 
         # Editor looks at their own profile page.
         self.login(self.EDITOR_EMAIL)
-        response = self.get_json(
-            '/profilehandler/data/%s' % self.EDITOR_USERNAME)
+        response = self.get_json(f'/profilehandler/data/{self.EDITOR_USERNAME}')
         self.assertEqual(response['user_bio'], 'My new editor bio')
         self.assertEqual(response['subject_interests'], ['editor', 'editing'])
         self.logout()
 
         # Looged-out user looks at editor's profile page.
-        response = self.get_json(
-            '/profilehandler/data/%s' % self.EDITOR_USERNAME)
+        response = self.get_json(f'/profilehandler/data/{self.EDITOR_USERNAME}')
         self.assertEqual(response['user_bio'], 'My new editor bio')
         self.assertEqual(response['subject_interests'], ['editor', 'editing'])
 
@@ -233,8 +227,7 @@ class UserContributionsTests(test_utils.GenericTestBase):
         # Check that the profile page for a user with no contributions shows
         # that they have 0 created/edited explorations.
         self.signup(self.EMAIL_A, self.USERNAME_A)
-        response_dict = self.get_json(
-            '/profilehandler/data/%s' % self.USERNAME_A)
+        response_dict = self.get_json(f'/profilehandler/data/{self.USERNAME_A}')
         self.assertEqual(
             response_dict['created_exp_summary_dicts'], [])
         self.assertEqual(
@@ -250,8 +243,7 @@ class UserContributionsTests(test_utils.GenericTestBase):
             self.EXP_ID_1, user_a_id, end_state_name='End')
         rights_manager.publish_exploration(user_a, self.EXP_ID_1)
 
-        response_dict = self.get_json(
-            '/profilehandler/data/%s' % self.USERNAME_A)
+        response_dict = self.get_json(f'/profilehandler/data/{self.USERNAME_A}')
         self.assertEqual(len(
             response_dict['created_exp_summary_dicts']), 1)
         self.assertEqual(len(
@@ -284,8 +276,7 @@ class UserContributionsTests(test_utils.GenericTestBase):
             })], 'Test edit')
         self.process_and_flush_pending_tasks()
 
-        response_dict = self.get_json(
-            '/profilehandler/data/%s' % self.USERNAME_B)
+        response_dict = self.get_json(f'/profilehandler/data/{self.USERNAME_B}')
         self.assertEqual(len(
             response_dict['created_exp_summary_dicts']), 0)
         self.assertEqual(len(
@@ -308,8 +299,7 @@ class FirstContributionDateTests(test_utils.GenericTestBase):
         self.signup(self.EMAIL, self.USERNAME)
         self.login(self.EMAIL)
         user_id = self.get_user_id_from_email(self.EMAIL)
-        response_dict = self.get_json(
-            '/profilehandler/data/%s' % self.USERNAME)
+        response_dict = self.get_json(f'/profilehandler/data/{self.USERNAME}')
         self.assertIsNone(response_dict['first_contribution_msec'])
 
         # Update the first_contribution_msec to the current time in
@@ -322,8 +312,7 @@ class FirstContributionDateTests(test_utils.GenericTestBase):
         user_services.save_user_settings(user_settings_to_update)
 
         # Test the contribution date correctly changes to current_time_in_msecs.
-        response_dict = self.get_json(
-            '/profilehandler/data/%s' % self.USERNAME)
+        response_dict = self.get_json(f'/profilehandler/data/{self.USERNAME}')
         self.assertEqual(
             response_dict['first_contribution_msec'],
             first_time_in_msecs)
@@ -336,8 +325,7 @@ class FirstContributionDateTests(test_utils.GenericTestBase):
             second_time_in_msecs
         )
         user_services.save_user_settings(user_settings_to_update)
-        response_dict = self.get_json(
-            '/profilehandler/data/%s' % self.USERNAME)
+        response_dict = self.get_json(f'/profilehandler/data/{self.USERNAME}')
         self.assertEqual(
             response_dict['first_contribution_msec'],
             first_time_in_msecs)
@@ -473,14 +461,12 @@ class ProfileLinkTests(test_utils.GenericTestBase):
 
     def test_get_profile_picture_invalid_username(self) -> None:
         self.get_json(
-            '%s%s' % (self.PROFILE_PIC_URL, self.USERNAME),
-            expected_status_int=404)
+            f'{self.PROFILE_PIC_URL}{self.USERNAME}', expected_status_int=404
+        )
 
     def test_get_profile_picture_valid_username(self) -> None:
         self.signup(self.EMAIL, self.USERNAME)
-        response_dict = self.get_json(
-            '%s%s' % (self.PROFILE_PIC_URL, self.USERNAME)
-        )
+        response_dict = self.get_json(f'{self.PROFILE_PIC_URL}{self.USERNAME}')
         # Every user must have a profile picture.
         self.assertEqual(
             response_dict['profile_picture_data_url_for_username'],
@@ -491,7 +477,7 @@ class EmailPreferencesTests(test_utils.GenericTestBase):
 
     def test_missing_can_receive_email_updates_key_raises_error(self) -> None:
         self.login(self.EDITOR_EMAIL)
-        self.get_html_response(feconf.SIGNUP_URL + '?return_url=/')
+        self.get_html_response(f'{feconf.SIGNUP_URL}?return_url=/')
         csrf_token = self.get_new_csrf_token()
         response = self.post_json(
             feconf.SIGNUP_DATA_URL,
@@ -510,7 +496,7 @@ class EmailPreferencesTests(test_utils.GenericTestBase):
 
     def test_user_allowing_emails_on_signup(self) -> None:
         self.login(self.EDITOR_EMAIL)
-        self.get_html_response(feconf.SIGNUP_URL + '?return_url=/')
+        self.get_html_response(f'{feconf.SIGNUP_URL}?return_url=/')
         csrf_token = self.get_new_csrf_token()
         json_response = self.post_json(
             feconf.SIGNUP_DATA_URL,
@@ -553,7 +539,7 @@ class EmailPreferencesTests(test_utils.GenericTestBase):
 
     def test_send_post_signup_email(self) -> None:
         self.login(self.EDITOR_EMAIL)
-        self.get_html_response(feconf.SIGNUP_URL + '?return_url=/')
+        self.get_html_response(f'{feconf.SIGNUP_URL}?return_url=/')
         csrf_token = self.get_new_csrf_token()
         with self.swap(feconf, 'CAN_SEND_EMAILS', True):
             with self.swap_to_always_return(
@@ -577,7 +563,7 @@ class EmailPreferencesTests(test_utils.GenericTestBase):
 
     def test_user_cannot_be_added_to_bulk_email_mailing_list(self) -> None:
         self.login(self.EDITOR_EMAIL)
-        self.get_html_response(feconf.SIGNUP_URL + '?return_url=/')
+        self.get_html_response(f'{feconf.SIGNUP_URL}?return_url=/')
         csrf_token = self.get_new_csrf_token()
         with self.swap_to_always_return(
             user_services, 'update_email_preferences', True
@@ -595,7 +581,7 @@ class EmailPreferencesTests(test_utils.GenericTestBase):
 
     def test_user_disallowing_emails_on_signup(self) -> None:
         self.login(self.EDITOR_EMAIL)
-        self.get_html_response(feconf.SIGNUP_URL + '?return_url=/')
+        self.get_html_response(f'{feconf.SIGNUP_URL}?return_url=/')
         csrf_token = self.get_new_csrf_token()
         self.post_json(
             feconf.SIGNUP_DATA_URL,
@@ -711,7 +697,7 @@ class SignupTests(test_utils.GenericTestBase):
 
     def test_signup_page_does_not_have_top_right_menu(self) -> None:
         self.login(self.EDITOR_EMAIL)
-        response = self.get_html_response(feconf.SIGNUP_URL + '?return_url=/')
+        response = self.get_html_response(f'{feconf.SIGNUP_URL}?return_url=/')
         # Sign in can't be inside an html tag, but can appear inside js code.
         response.mustcontain(no=['Logout'])
         self.logout()
@@ -720,7 +706,7 @@ class SignupTests(test_utils.GenericTestBase):
         exp_services.load_demo('0')
 
         self.login(self.EDITOR_EMAIL)
-        response = self.get_html_response(feconf.SIGNUP_URL + '?return_url=/')
+        response = self.get_html_response(f'{feconf.SIGNUP_URL}?return_url=/')
         self.get_html_response(feconf.SIGNUP_URL)
         response = self.get_html_response('/create/0', expected_status_int=302)
         self.assertIn('logout', response.headers['location'])
@@ -731,7 +717,7 @@ class SignupTests(test_utils.GenericTestBase):
     def test_to_check_url_redirection_in_signup(self) -> None:
         """To validate the redirections from return_url."""
         self.login(self.EDITOR_EMAIL)
-        self.get_html_response(feconf.SIGNUP_URL + '?return_url=/')
+        self.get_html_response(f'{feconf.SIGNUP_URL}?return_url=/')
         csrf_token = self.get_new_csrf_token()
 
         # Registering this user fully.
@@ -752,7 +738,7 @@ class SignupTests(test_utils.GenericTestBase):
             """To strip the domain form the location url."""
             splitted_url = re.match(r'(http[s]?:\/\/)?([^\/\s]+\/)(.*)', url)
             assert splitted_url is not None
-            return splitted_url.group(3)
+            return splitted_url[3]
 
         response = self.get_html_response(
             '/signup?return_url=https://google.com', expected_status_int=302)
@@ -784,7 +770,7 @@ class SignupTests(test_utils.GenericTestBase):
 
     def test_accepting_terms_is_handled_correctly(self) -> None:
         self.login(self.EDITOR_EMAIL)
-        self.get_html_response(feconf.SIGNUP_URL + '?return_url=/')
+        self.get_html_response(f'{feconf.SIGNUP_URL}?return_url=/')
         csrf_token = self.get_new_csrf_token()
 
         response_dict = self.post_json(
@@ -840,7 +826,7 @@ class SignupTests(test_utils.GenericTestBase):
 
     def test_username_is_handled_correctly(self) -> None:
         self.login(self.EDITOR_EMAIL)
-        self.get_html_response(feconf.SIGNUP_URL + '?return_url=/')
+        self.get_html_response(f'{feconf.SIGNUP_URL}?return_url=/')
         csrf_token = self.get_new_csrf_token()
 
         response_dict = self.post_json(
@@ -916,7 +902,7 @@ class SignupTests(test_utils.GenericTestBase):
 
     def test_default_dashboard_for_new_users(self) -> None:
         self.login(self.EDITOR_EMAIL)
-        self.get_html_response(feconf.SIGNUP_URL + '?return_url=/')
+        self.get_html_response(f'{feconf.SIGNUP_URL}?return_url=/')
         csrf_token = self.get_new_csrf_token()
 
         # This user should have the creator dashboard as default.
@@ -977,7 +963,7 @@ class SignupTests(test_utils.GenericTestBase):
 
     def test_user_settings_of_non_existing_user(self) -> None:
         self.login(self.OWNER_EMAIL)
-        self.get_html_response(feconf.SIGNUP_URL + '?return_url=/')
+        self.get_html_response(f'{feconf.SIGNUP_URL}?return_url=/')
 
         values_dict = {
             'can_send_emails': False,
@@ -1112,71 +1098,80 @@ class BulkEmailWebhookEndpointTests(test_utils.GenericTestBase):
         # The GET function should not throw any error and should return status
         # 200. No other check required here.
         with self.swap_secret:
-            self.get_html_response(
-                '%s/secret' % feconf.BULK_EMAIL_WEBHOOK_ENDPOINT)
+            self.get_html_response(f'{feconf.BULK_EMAIL_WEBHOOK_ENDPOINT}/secret')
 
     def test_raises_error_if_audience_id_provided_without_email_id(
         self
     ) -> None:
         response = self.post_json(
-                '%s/secret' % feconf.BULK_EMAIL_WEBHOOK_ENDPOINT,
-                {
-                    'data[list_id]': 'audience_id',
-                    'type': 'subscribe'
-                },
-                use_payload=False,
-                expected_status_int=400
-            )
+            f'{feconf.BULK_EMAIL_WEBHOOK_ENDPOINT}/secret',
+            {'data[list_id]': 'audience_id', 'type': 'subscribe'},
+            use_payload=False,
+            expected_status_int=400,
+        )
         self.assertEqual(
             response['error'],
             'Missing key in handler args: data[email].'
         )
 
     def test_post_with_different_audience_id(self) -> None:
-        with self.swap_secret, self.swap_audience_id:
+        with (self.swap_secret, self.swap_audience_id):
             json_response = self.post_json(
-                '%s/secret' % feconf.BULK_EMAIL_WEBHOOK_ENDPOINT, {
+                f'{feconf.BULK_EMAIL_WEBHOOK_ENDPOINT}/secret',
+                {
                     'data[list_id]': 'invalid_audience_id',
                     'data[email]': self.EDITOR_EMAIL,
-                    'type': 'subscribe'
-                }, use_payload=False)
+                    'type': 'subscribe',
+                },
+                use_payload=False,
+            )
             self.assertEqual(json_response, {})
 
     def test_post_with_invalid_email_id(self) -> None:
-        with self.swap_secret, self.swap_audience_id:
+        with (self.swap_secret, self.swap_audience_id):
             json_response = self.post_json(
-                '%s/secret' % feconf.BULK_EMAIL_WEBHOOK_ENDPOINT, {
+                f'{feconf.BULK_EMAIL_WEBHOOK_ENDPOINT}/secret',
+                {
                     'data[list_id]': 'audience_id',
                     'data[email]': 'invalid_email@example.com',
-                    'type': 'subscribe'
-                }, use_payload=False)
+                    'type': 'subscribe',
+                },
+                use_payload=False,
+            )
             self.assertEqual(json_response, {})
 
     def test_post_with_invalid_secret(self) -> None:
         with self.swap_secret:
             with self.capture_logging(min_level=logging.ERROR) as captured_logs:
                 self.post_json(
-                    '%s/invalid_secret' % feconf.BULK_EMAIL_WEBHOOK_ENDPOINT, {
+                    f'{feconf.BULK_EMAIL_WEBHOOK_ENDPOINT}/invalid_secret',
+                    {
                         'data[list_id]': 'audience_id',
                         'data[email]': self.EDITOR_EMAIL,
-                        'type': 'subscribe'
-                    }, use_payload=False, expected_status_int=404)
+                        'type': 'subscribe',
+                    },
+                    use_payload=False,
+                    expected_status_int=404,
+                )
                 self.assertIn(
                     'Received invalid Mailchimp webhook secret', captured_logs)
 
     def test_post(self) -> None:
-        with self.swap_secret, self.swap_audience_id:
+        with (self.swap_secret, self.swap_audience_id):
             email_preferences = user_services.get_email_preferences(
                 self.editor_id)
             self.assertEqual(email_preferences.can_receive_email_updates, False)
 
             # User subscribed externally.
             json_response = self.post_json(
-                '%s/secret' % feconf.BULK_EMAIL_WEBHOOK_ENDPOINT, {
+                f'{feconf.BULK_EMAIL_WEBHOOK_ENDPOINT}/secret',
+                {
                     'data[list_id]': 'audience_id',
                     'data[email]': self.EDITOR_EMAIL,
-                    'type': 'subscribe'
-                }, use_payload=False)
+                    'type': 'subscribe',
+                },
+                use_payload=False,
+            )
             self.assertEqual(json_response, {})
             email_preferences = user_services.get_email_preferences(
                 self.editor_id)
@@ -1184,11 +1179,14 @@ class BulkEmailWebhookEndpointTests(test_utils.GenericTestBase):
 
             # User unsubscribed externally.
             json_response = self.post_json(
-                '%s/secret' % feconf.BULK_EMAIL_WEBHOOK_ENDPOINT, {
+                f'{feconf.BULK_EMAIL_WEBHOOK_ENDPOINT}/secret',
+                {
                     'data[list_id]': 'audience_id',
                     'data[email]': self.EDITOR_EMAIL,
-                    'type': 'unsubscribe'
-                }, use_payload=False)
+                    'type': 'unsubscribe',
+                },
+                use_payload=False,
+            )
             self.assertEqual(json_response, {})
             email_preferences = user_services.get_email_preferences(
                 self.editor_id)
@@ -1271,7 +1269,8 @@ class ExportAccountHandlerTests(test_utils.GenericTestBase):
             filename = 'oppia_takeout_data.zip'
             self.assertEqual(
                 data.headers['Content-Disposition'],
-                'attachment; filename=%s' % filename)
+                f'attachment; filename={filename}',
+            )
             zf_saved = zipfile.ZipFile(io.BytesIO(data.body))
             self.assertEqual(
                 zf_saved.namelist(),
@@ -1335,7 +1334,8 @@ class ExportAccountHandlerTests(test_utils.GenericTestBase):
             filename = 'oppia_takeout_data.zip'
             self.assertEqual(
                 data.headers['Content-Disposition'],
-                'attachment; filename=%s' % filename)
+                f'attachment; filename={filename}',
+            )
             zf_saved = zipfile.ZipFile(io.BytesIO(data.body))
             self.assertEqual(
                 zf_saved.namelist(),

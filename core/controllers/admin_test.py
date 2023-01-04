@@ -542,9 +542,9 @@ class AdminIntegrationTest(test_utils.GenericTestBase):
         self.assertEqual(
             observed_log_messages,
             [
-                '[ADMIN] %s reloaded collection 0' % self.admin_id,
-                'Collection with id 0 was loaded.'
-            ]
+                f'[ADMIN] {self.admin_id} reloaded collection 0',
+                'Collection with id 0 was loaded.',
+            ],
         )
 
         self.logout()
@@ -832,8 +832,10 @@ class AdminIntegrationTest(test_utils.GenericTestBase):
         self.assertFalse(config_domain.PROMO_BAR_ENABLED.value)
         self.assertEqual(
             observed_log_messages,
-            ['[ADMIN] %s reverted config property: promo_bar_enabled'
-             % self.admin_id])
+            [
+                f'[ADMIN] {self.admin_id} reverted config property: promo_bar_enabled'
+            ],
+        )
 
         self.logout()
 
@@ -877,8 +879,8 @@ class AdminIntegrationTest(test_utils.GenericTestBase):
             platform_feature_services, 'ALL_FEATURES_LIST',
             [ParamNames.TEST_FEATURE_1])
         feature_set_ctx = self.swap(
-            platform_feature_services, 'ALL_FEATURES_NAMES_SET',
-            set([feature.name]))
+            platform_feature_services, 'ALL_FEATURES_NAMES_SET', {feature.name}
+        )
         with feature_list_ctx, feature_set_ctx:
             response_dict = self.get_json('/adminhandler')
             self.assertEqual(
@@ -910,8 +912,8 @@ class AdminIntegrationTest(test_utils.GenericTestBase):
             platform_feature_services, 'ALL_FEATURES_LIST',
             [ParamNames.TEST_FEATURE_1])
         feature_set_ctx = self.swap(
-            platform_feature_services, 'ALL_FEATURES_NAMES_SET',
-            set([feature.name]))
+            platform_feature_services, 'ALL_FEATURES_NAMES_SET', {feature.name}
+        )
         with feature_list_ctx, feature_set_ctx:
             self.post_json(
                 '/adminhandler', {
@@ -956,8 +958,8 @@ class AdminIntegrationTest(test_utils.GenericTestBase):
             platform_feature_services, 'ALL_FEATURES_LIST',
             [ParamNames.TEST_FEATURE_1])
         feature_set_ctx = self.swap(
-            platform_feature_services, 'ALL_FEATURES_NAMES_SET',
-            set([feature.name]))
+            platform_feature_services, 'ALL_FEATURES_NAMES_SET', {feature.name}
+        )
         with feature_list_ctx, feature_set_ctx:
             response_dict = self.get_json('/adminhandler')
             self.assertEqual(
@@ -1001,8 +1003,8 @@ class AdminIntegrationTest(test_utils.GenericTestBase):
             platform_feature_services, 'ALL_FEATURES_LIST',
             [ParamNames.TEST_FEATURE_1])
         feature_set_ctx = self.swap(
-            platform_feature_services, 'ALL_FEATURES_NAMES_SET',
-            set([feature.name]))
+            platform_feature_services, 'ALL_FEATURES_NAMES_SET', {feature.name}
+        )
         with feature_list_ctx, feature_set_ctx:
             response = self.post_json(
                 '/adminhandler', {
@@ -1178,8 +1180,8 @@ class AdminIntegrationTest(test_utils.GenericTestBase):
             platform_feature_services, 'ALL_FEATURES_LIST',
             [ParamNames.TEST_FEATURE_1])
         feature_set_ctx = self.swap(
-            platform_feature_services, 'ALL_FEATURES_NAMES_SET',
-            set([feature.name]))
+            platform_feature_services, 'ALL_FEATURES_NAMES_SET', {feature.name}
+        )
         # Here we use MyPy ignore because we are assigning a None value
         # where instance of 'PlatformParameter' is expected, and this is
         # done to Replace the stored instance with None in order to
@@ -2206,8 +2208,8 @@ class DataExtractionQueryHandlerTests(test_utils.GenericTestBase):
 
         self.assertEqual(
             response['error'],
-            'Entity for exploration with id %s and version 10 not found.'
-            % self.EXP_ID)
+            f'Entity for exploration with id {self.EXP_ID} and version 10 not found.',
+        )
 
 
 class ClearSearchIndexTest(test_utils.GenericTestBase):

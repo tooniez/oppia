@@ -77,11 +77,11 @@ class RecentCommitsHandler(
             exp_services.get_next_page_of_all_non_private_commits(
                 urlsafe_start_cursor=urlsafe_start_cursor))
 
-        exp_ids = set(commit.exploration_id for commit in all_commits)
+        exp_ids = {commit.exploration_id for commit in all_commits}
         exp_ids_to_exp_data = (
             exp_services.get_exploration_titles_and_categories(list(exp_ids)))
 
-        unique_user_ids = list(set(commit.user_id for commit in all_commits))
+        unique_user_ids = list({commit.user_id for commit in all_commits})
         unique_usernames = user_services.get_usernames(unique_user_ids)
         user_id_to_username = dict(zip(unique_user_ids, unique_usernames))
         all_commit_dicts = []

@@ -241,9 +241,9 @@ class ExplorationPage(
         version = self.normalized_request.get('v')
 
         if self.normalized_request.get('iframed'):
-            redirect_url = '/embed/exploration/%s' % exploration_id
+            redirect_url = f'/embed/exploration/{exploration_id}'
             if version:
-                redirect_url += '?v=%s' % version
+                redirect_url += f'?v={version}'
             self.redirect(redirect_url)
             return
 
@@ -1530,17 +1530,17 @@ class ExplorationCompleteEventHandler(
         if user_id and collection_id:
             collection_services.record_played_exploration_in_collection_context(
                 user_id, collection_id, exploration_id)
-            next_exp_id_to_complete = (
-                collection_services.get_next_exploration_id_to_complete_by_user( # pylint: disable=line-too-long
-                    user_id, collection_id))
-
-            if not next_exp_id_to_complete:
-                learner_progress_services.mark_collection_as_completed(
-                    user_id, collection_id)
-            else:
+            if next_exp_id_to_complete := (
+                collection_services.get_next_exploration_id_to_complete_by_user(  # pylint: disable=line-too-long
+                    user_id, collection_id
+                )
+            ):
                 learner_progress_services.mark_collection_as_incomplete(
                     user_id, collection_id)
 
+            else:
+                learner_progress_services.mark_collection_as_completed(
+                    user_id, collection_id)
         self.render_json(self.values)
 
 
@@ -2101,10 +2101,7 @@ class TransientCheckpointUrlPage(
         if logged_out_user_data is None:
             raise self.PageNotFoundException()
 
-        redirect_url = '%s/%s?pid=%s' % (
-            feconf.EXPLORATION_URL_PREFIX,
-            logged_out_user_data.exploration_id,
-            unique_progress_url_id)
+        redirect_url = f'{feconf.EXPLORATION_URL_PREFIX}/{logged_out_user_data.exploration_id}?pid={unique_progress_url_id}'
 
         self.redirect(redirect_url)
 
@@ -2378,14 +2375,14 @@ class CheckpointReachedEventHandler(
             exploration_id: str. The ID of the exploration.
         """
         assert self.normalized_payload is not None
-        most_recently_reached_checkpoint_state_name = (
-            self.normalized_payload[
-                'most_recently_reached_checkpoint_state_name'])
-        most_recently_reached_checkpoint_exp_version = (
-            self.normalized_payload[
-                'most_recently_reached_checkpoint_exp_version'])
-
         if self.user_id is not None:
+            most_recently_reached_checkpoint_state_name = (
+                self.normalized_payload[
+                    'most_recently_reached_checkpoint_state_name'])
+            most_recently_reached_checkpoint_exp_version = (
+                self.normalized_payload[
+                    'most_recently_reached_checkpoint_exp_version'])
+
             user_services.update_learner_checkpoint_progress(
                 self.user_id,
                 exploration_id,
@@ -2444,10 +2441,12 @@ class ExplorationRestartEventHandler(
             self.normalized_payload.get(
                 'most_recently_reached_checkpoint_state_name'))
 
-        if most_recently_reached_checkpoint_state_name is None:
-            if self.user_id is not None:
-                user_services.clear_learner_checkpoint_progress(
-                    self.user_id, exploration_id)
+        if (
+            most_recently_reached_checkpoint_state_name is None
+            and self.user_id is not None
+        ):
+            user_services.clear_learner_checkpoint_progress(
+                self.user_id, exploration_id)
 
         self.render_json(self.values)
 
@@ -2493,9 +2492,9 @@ class SyncLoggedOutLearnerProgressHandler(
     def post(self, exploration_id: str) -> None:
         """Handles POST requests."""
         assert self.normalized_payload is not None
-        unique_progress_url_id = self.normalized_payload[
-            'unique_progress_url_id']
         if self.user_id is not None:
+            unique_progress_url_id = self.normalized_payload[
+                'unique_progress_url_id']
             exp_services.sync_logged_out_learner_progress_with_logged_in_progress( # pylint: disable=line-too-long
                 self.user_id,
                 exploration_id,

@@ -28,7 +28,7 @@ import sys
 from core.tests import test_utils
 from scripts import install_python_dev_dependencies
 
-from typing import Dict, Generator, List
+from typing import Dict, Generator, List, Optional
 
 
 class InstallPythonDevDependenciesTests(test_utils.GenericTestBase):
@@ -53,7 +53,10 @@ class InstallPythonDevDependenciesTests(test_utils.GenericTestBase):
             yield
         finally:
             if had_attribute:
-                setattr(sys, 'real_prefix', original)
+                # Pylint doesn't recognize that if we reach this part of the
+                # code, then had_attribute is True, which means that we did set
+                # `original` above.
+                setattr(sys, 'real_prefix', original)  # pylint: disable=used-before-assignment
             else:
                 delattr(sys, 'real_prefix')
 
@@ -111,31 +114,30 @@ class InstallPythonDevDependenciesTests(test_utils.GenericTestBase):
 
     def test_install_installation_tools(self) -> None:
         expected_tools = {
-            'pip': '22.1.1',
-            'pip-tools': '6.6.2',
-            'setuptools': '58.5.3',
+            'pip': '24.3.1',
+            'pip-tools': '7.4.1',
+            'setuptools': '75.6.0',
         }
         installed_tools: Dict[str, str] = {}
 
-        def mock_run(
-            args: List[str], check: bool, encoding: str,
-        ) -> None:
-            package, version = args[-1].split('==')
-            self.assertNotIn(package, installed_tools)
-            installed_tools[package] = version
-            self.assertEqual(
-                args,
-                [
+        process = subprocess.Popen(
+            ['echo', 'test'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        def mock_popen(  # pylint: disable=unused-argument
+            cmd_tokens: List[str], stdout: int, stdin: Optional[int] = None,
+            stderr: Optional[int] = None
+        ) -> subprocess.Popen[bytes]:
+            if len(cmd_tokens) > 3 and cmd_tokens[3] == 'install':
+                package, version = cmd_tokens[4].split('==')
+                installed_tools[package] = version
+                self.assertEqual(cmd_tokens, [
                     sys.executable, '-m', 'pip', 'install',
                     f'{package}=={version}',
-                ],
-            )
-            self.assertTrue(check)
-            self.assertEqual(encoding, 'utf-8')
+                ])
+            return process
 
-        run_swap = self.swap(subprocess, 'run', mock_run)
+        popen_swap = self.swap(subprocess, 'Popen', mock_popen)
 
-        with run_swap:
+        with popen_swap:
             install_python_dev_dependencies.install_installation_tools()
 
         self.assertEqual(installed_tools, expected_tools)
@@ -147,7 +149,10 @@ class InstallPythonDevDependenciesTests(test_utils.GenericTestBase):
 
         run_swap = self.swap_with_checks(
             subprocess, 'run', mock_run, expected_args=[
-                (['pip-sync', 'requirements_dev.txt'],),
+                (
+                    ['pip-sync', 'requirements_dev.txt',
+                    '--pip-args', '--require-hashes --no-deps'],
+                ),
             ],
             expected_kwargs=[
                 {'check': True, 'encoding': 'utf-8'},
@@ -185,7 +190,9 @@ class InstallPythonDevDependenciesTests(test_utils.GenericTestBase):
         run_swap = self.swap_with_checks(
             subprocess, 'run', mock_run, expected_args=[
                 ([
-                    'pip-compile', '--no-emit-index-url', 'requirements_dev.in',
+                    'pip-compile', '--no-emit-index-url', '--quiet',
+                    '--strip-extras', '--generate-hashes',
+                    'requirements_dev.in',
                     '--output-file', 'requirements_dev.txt',
                 ],),
             ],
@@ -224,7 +231,9 @@ class InstallPythonDevDependenciesTests(test_utils.GenericTestBase):
         run_swap = self.swap_with_checks(
             subprocess, 'run', mock_run, expected_args=[
                 ([
-                    'pip-compile', '--no-emit-index-url', 'requirements_dev.in',
+                    'pip-compile', '--no-emit-index-url', '--quiet',
+                    '--strip-extras', '--generate-hashes',
+                    'requirements_dev.in',
                     '--output-file', 'requirements_dev.txt',
                 ],),
             ],

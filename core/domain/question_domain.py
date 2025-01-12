@@ -1814,6 +1814,26 @@ class Question(translation_domain.BaseTranslatableObject):
         return states_dict['question_state'], next_content_id_index
 
     @classmethod
+    def _convert_state_v55_dict_to_v56_dict(
+        cls, question_state_dict: state_domain.StateDict
+    ) -> state_domain.StateDict:
+        """Converts from version 55 to 56. Version 56 adds a field for
+        inapplicable skill misconception IDs for the exploration.
+
+        Args:
+            question_state_dict: dict. A dict where each key-value pair
+                represents respectively, a state name and a dict used to
+                initialize a State domain object.
+
+        Returns:
+            dict. The converted question_state_dict.
+        """
+
+        question_state_dict['inapplicable_skill_misconception_ids'] = []
+
+        return question_state_dict
+
+    @classmethod
     def update_state_from_model(
         cls,
         versioned_question_state: VersionedQuestionStateDict,
@@ -1939,6 +1959,11 @@ class Question(translation_domain.BaseTranslatableObject):
                 dest_is_specified = True
             if answer_group.outcome.dest_if_really_stuck is not None:
                 dest_if_stuck_is_specified = True
+            if answer_group.outcome.refresher_exploration_id is not None:
+                raise utils.ValidationError(
+                    'refresher_exploration_id should be None for '
+                    'Question outcome.'
+                )
 
         # Ruling out the possibility of None for MyPy type checking, because
         # interaction.default_outcome can be None in the case of explorations
@@ -1955,9 +1980,15 @@ class Question(translation_domain.BaseTranslatableObject):
         if interaction.default_outcome.dest_if_really_stuck is not None:
             dest_if_stuck_is_specified = True
 
+        if interaction.default_outcome.refresher_exploration_id is not None:
+            raise utils.ValidationError(
+                'refresher_exploration_id should be None for '
+                'Question default outcome.'
+            )
+
         if not at_least_one_correct_answer:
             raise utils.ValidationError(
-                'Expected at least one answer group to have a correct ' +
+                'Expected at least one answer group to have a correct '
                 'answer.'
             )
 
@@ -1992,7 +2023,8 @@ class Question(translation_domain.BaseTranslatableObject):
         self.question_state_data.validate(
             {},
             False,
-            tagged_skill_misconception_id_required=True)
+            tagged_skill_misconception_id_required=True,
+            strict=True)
         self.validate_translatable_contents(self.next_content_id_index)
 
     def validate(self) -> None:
@@ -2006,7 +2038,10 @@ class Question(translation_domain.BaseTranslatableObject):
             raise utils.ValidationError(
                 'Expected version to be an integer, received %s' %
                 self.version)
-
+        if self.version < 0:
+            raise utils.ValidationError(
+                'Expected version to be non-negative, received %s' % (
+                    self.version))
         self.partial_validate()
 
     @classmethod
@@ -2108,6 +2143,7 @@ class QuestionSummaryDict(TypedDict):
     last_updated_msec: float
     created_on_msec: float
     misconception_ids: List[str]
+    version: int
 
 
 class QuestionSummary:
@@ -2120,7 +2156,8 @@ class QuestionSummary:
         misconception_ids: List[str],
         interaction_id: str,
         question_model_created_on: datetime.datetime,
-        question_model_last_updated: datetime.datetime
+        question_model_last_updated: datetime.datetime,
+        version: int
     ) -> None:
         """Constructs a Question Summary domain object.
 
@@ -2136,6 +2173,7 @@ class QuestionSummary:
                 the question model is created.
             question_model_last_updated: datetime.datetime. Date and time
                 when the question model was last updated.
+            version: int. The current version of the question.
         """
         self.id = question_id
         self.question_content = html_cleaner.clean(question_content)
@@ -2143,6 +2181,7 @@ class QuestionSummary:
         self.interaction_id = interaction_id
         self.created_on = question_model_created_on
         self.last_updated = question_model_last_updated
+        self.version = version
 
     def to_dict(self) -> QuestionSummaryDict:
         """Returns a dictionary representation of this domain object.
@@ -2157,7 +2196,8 @@ class QuestionSummary:
             'interaction_id': self.interaction_id,
             'last_updated_msec': utils.get_time_in_millisecs(self.last_updated),
             'created_on_msec': utils.get_time_in_millisecs(self.created_on),
-            'misconception_ids': self.misconception_ids
+            'misconception_ids': self.misconception_ids,
+            'version': self.version
         }
 
     def validate(self) -> None:
@@ -2197,6 +2237,13 @@ class QuestionSummary:
             raise utils.ValidationError(
                 'Expected misconception ids to be a list of '
                 'strings, received %s' % self.misconception_ids)
+        if not isinstance(self.version, int):
+            raise utils.ValidationError(
+                'Expected version to be int, received %s' % self.version)
+        if self.version < 0:
+            raise utils.ValidationError(
+                'Expected version to be non-negative, received %s' % (
+                    self.version))
 
 
 class QuestionSkillLinkDict(TypedDict):

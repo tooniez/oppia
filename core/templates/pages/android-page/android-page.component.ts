@@ -16,18 +16,29 @@
  * @fileoverview Component for the Android page.
  */
 
-import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
-import { downgradeComponent } from '@angular/upgrade/static';
-import { TranslateService } from '@ngx-translate/core';
-import { Subscription } from 'rxjs';
-import { AlertsService } from 'services/alerts.service';
+import {
+  Component,
+  OnInit,
+  OnDestroy,
+  ViewChild,
+  ElementRef,
+} from '@angular/core';
+import {TranslateService} from '@ngx-translate/core';
+import {Subscription} from 'rxjs';
+import {AlertsService} from 'services/alerts.service';
 
-import { PageTitleService } from 'services/page-title.service';
-import { UrlInterpolationService } from 'domain/utilities/url-interpolation.service';
-import { animate, keyframes, style, transition, trigger } from '@angular/animations';
-import { WindowDimensionsService } from 'services/contextual/window-dimensions.service';
-import { AppConstants } from 'app.constants';
-import { MailingListBackendApiService } from 'domain/mailing-list/mailing-list-backend-api.service';
+import {PageTitleService} from 'services/page-title.service';
+import {UrlInterpolationService} from 'domain/utilities/url-interpolation.service';
+import {
+  animate,
+  keyframes,
+  style,
+  transition,
+  trigger,
+} from '@angular/animations';
+import {WindowDimensionsService} from 'services/contextual/window-dimensions.service';
+import {AppConstants} from 'app.constants';
+import {MailingListBackendApiService} from 'domain/mailing-list/mailing-list-backend-api.service';
 
 import './android-page.component.css';
 
@@ -38,30 +49,30 @@ import './android-page.component.css';
   animations: [
     trigger('fadeIn', [
       transition(':enter', [
-        style({ opacity: 0 }),
-        animate('1s ease', keyframes([
-          style({ opacity: 0 }),
-          style({ opacity: 1 })
-        ]))
-      ])
+        style({opacity: 0}),
+        animate(
+          '1s ease',
+          keyframes([style({opacity: 0}), style({opacity: 1})])
+        ),
+      ]),
     ]),
     trigger('delayedFadeIn', [
       transition(':enter', [
-        style({ opacity: 0 }),
-        animate('1s 1s ease', keyframes([
-          style({ opacity: 0 }),
-          style({ opacity: 1 })
-        ]))
-      ])
-    ])
-  ]
+        style({opacity: 0}),
+        animate(
+          '1s 1s ease',
+          keyframes([style({opacity: 0}), style({opacity: 1})])
+        ),
+      ]),
+    ]),
+  ],
 })
 export class AndroidPageComponent implements OnInit, OnDestroy {
   // These properties are initialized using Angular lifecycle hooks
   // and we need to do non-null assertion. For more information, see
   // https://github.com/oppia/oppia/wiki/Guide-on-defining-types#ts-7-1
-  @ViewChild('androidUpdatesSection') androidUpdatesSectionRef!: (
-    ElementRef<Element>);
+  @ViewChild('androidUpdatesSection')
+  androidUpdatesSectionRef!: ElementRef<Element>;
 
   @ViewChild('featuresMainText') featuresMainTextRef!: ElementRef<Element>;
 
@@ -81,13 +92,12 @@ export class AndroidPageComponent implements OnInit, OnDestroy {
   userCanSubscribe: boolean = false;
   userHasSubscribed: boolean = false;
 
-  OPPIA_AVATAR_IMAGE_URL = (
-    this.urlInterpolationService
-      .getStaticImageUrl('/avatar/oppia_avatar_large_100px.svg'));
-
-  ANDROID_APP_URL = (
-    'https://play.google.com/store/apps/details?id=org.oppia.android'
+  OPPIA_AVATAR_IMAGE_URL = this.urlInterpolationService.getStaticImageUrl(
+    '/avatar/oppia_avatar_large_100px.svg'
   );
+
+  ANDROID_APP_URL =
+    'https://play.google.com/store/apps/details?id=org.oppia.android';
 
   directiveSubscriptions = new Subscription();
   constructor(
@@ -123,28 +133,36 @@ export class AndroidPageComponent implements OnInit, OnDestroy {
   }
 
   subscribeToAndroidList(): void {
-    this.mailingListBackendApiService.subscribeUserToMailingList(
-      String(this.emailAddress),
-      String(this.name),
-      AppConstants.MAILING_LIST_ANDROID_TAG
-    ).then((status) => {
-      if (status) {
-        this.userHasSubscribed = true;
-      } else {
+    this.mailingListBackendApiService
+      .subscribeUserToMailingList(
+        String(this.emailAddress),
+        String(this.name),
+        AppConstants.MAILING_LIST_ANDROID_TAG
+      )
+      .then(status => {
+        if (status) {
+          this.userHasSubscribed = true;
+        } else {
+          this.alertsService.addInfoMessage(
+            'Sorry, an unexpected error occurred. Please email admin@oppia.org ' +
+              'to be added to the mailing list.',
+            10000
+          );
+        }
+      })
+      .catch(errorResponse => {
         this.alertsService.addInfoMessage(
           'Sorry, an unexpected error occurred. Please email admin@oppia.org ' +
-          'to be added to the mailing list.', 10000);
-      }
-    }).catch(errorResponse => {
-      this.alertsService.addInfoMessage(
-        'Sorry, an unexpected error occurred. Please email admin@oppia.org ' +
-        'to be added to the mailing list.', 10000);
-    });
+            'to be added to the mailing list.',
+          10000
+        );
+      });
   }
 
   setPageTitle(): void {
     let translatedTitle = this.translateService.instant(
-      'I18N_ANDROID_PAGE_TITLE');
+      'I18N_ANDROID_PAGE_TITLE'
+    );
     this.pageTitleService.setDocumentTitle(translatedTitle);
   }
 
@@ -152,7 +170,3 @@ export class AndroidPageComponent implements OnInit, OnDestroy {
     this.directiveSubscriptions.unsubscribe();
   }
 }
-
-angular.module('oppia').directive(
-  'androidPage',
-  downgradeComponent({component: AndroidPageComponent}));

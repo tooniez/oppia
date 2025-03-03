@@ -15,11 +15,11 @@
 /**
  * @fileoverview Component for select skill modal.
  */
-import { Component } from '@angular/core';
-import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
-import { ConfirmOrCancelModal } from 'components/common-layout-directives/common-elements/confirm-or-cancel-modal.component';
-import { SkillSummaryBackendDict } from 'domain/skill/skill-summary.model';
-import { ShortSkillSummary } from 'domain/skill/short-skill-summary.model';
+import {Component} from '@angular/core';
+import {NgbActiveModal} from '@ng-bootstrap/ng-bootstrap';
+import {ConfirmOrCancelModal} from 'components/common-layout-directives/common-elements/confirm-or-cancel-modal.component';
+import {SkillSummaryBackendDict} from 'domain/skill/skill-summary.model';
+import {ShortSkillSummary} from 'domain/skill/short-skill-summary.model';
 
 export interface CategorizedSkills {
   [topic: string]: {
@@ -45,9 +45,7 @@ export class SelectSkillModalComponent extends ConfirmOrCancelModal {
   errorMessage: string =
     'This skill is already linked to the current question.';
 
-  constructor(
-    private ngbActiveModal: NgbActiveModal
-  ) {
+  constructor(private ngbActiveModal: NgbActiveModal) {
     super(ngbActiveModal);
   }
 
@@ -66,7 +64,8 @@ export class SelectSkillModalComponent extends ConfirmOrCancelModal {
     }
 
     let summary = totalSkills.find(
-      summary => summary.id === this.selectedSkillId);
+      summary => summary.id === this.selectedSkillId
+    );
 
     this.ngbActiveModal.close(summary);
   }
@@ -75,11 +74,13 @@ export class SelectSkillModalComponent extends ConfirmOrCancelModal {
     this.selectedSkillId = skillId;
   }
 
-  isSaveButtonEnabled(): boolean {
+  isDoneButtonDisabled(): boolean {
+    return !this.selectedSkillId || !this.isSkillAlreadyLinked();
+  }
+
+  isSkillAlreadyLinked(): boolean {
     for (let idx in this.associatedSkillSummaries) {
-      if (
-        this.associatedSkillSummaries[idx].getId() ===
-          this.selectedSkillId) {
+      if (this.associatedSkillSummaries[idx].getId() === this.selectedSkillId) {
         return false;
       }
     }

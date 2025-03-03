@@ -19,23 +19,28 @@
 from __future__ import annotations
 
 import copy
+import json
 import os
+from unittest import mock
 
 from core import feconf
 from core import utils
 from core.constants import constants
+from core.domain import caching_services
 from core.domain import exp_domain
 from core.domain import exp_fetchers
 from core.domain import exp_services
 from core.domain import exp_services_test
 from core.domain import param_domain
+from core.domain import platform_parameter_list
 from core.domain import rights_manager
 from core.domain import state_domain
 from core.domain import translation_domain
 from core.platform import models
 from core.tests import test_utils
 
-from typing import Dict, Final, List, Tuple, Union, cast
+from typing import Any, Dict, Final, List, Tuple, Union, cast
+import yaml
 
 MYPY = False
 if MYPY:  # pragma: no cover
@@ -1371,15 +1376,6 @@ class ExplorationDomainUnitTests(test_utils.GenericTestBase):
             'should not be empty.')
 
         self.state.content.html = (
-            '<oppia-noninteractive-video autoplay-with-value=\"true\" '
-            'end-with-value=\"11\" start-with-value=\"13\"'
-            ' video_id-with-value=\"&amp;quot;Ntcw0H0hwPU&amp;'
-            'quot;\"></oppia-noninteractive-video>')
-        self._assert_validation_error(
-            self.new_exploration, 'Start value should not be greater than End '
-            'value in Video tag.')
-
-        self.state.content.html = (
             '<oppia-noninteractive-video '
             'end-with-value=\"11\" start-with-value=\"9\"'
             ' video_id-with-value=\"&amp;quot;Ntcw0H0hwPU&amp;'
@@ -2262,9 +2258,9 @@ class ExplorationDomainUnitTests(test_utils.GenericTestBase):
         self.state.interaction.customization_args[
             'maxAllowableSelectionCount'].value = 2
         with self.assertRaisesRegex(
-            utils.ValidationError, 'Selected choices of rule \'0\' of answer '
-            'group \'0\' either less than min_selection_value or greater than '
-            'max_selection_value in ItemSelectionInput interaction.'
+            utils.ValidationError, 'Selected wrong number of choices in rule '
+            '\'0\' of answer group \'0\'. 3 were selected, it is either less '
+            'than 1 or greater than 2 in ItemSelectionInput interaction.'
         ):
             self.new_exploration.validate(strict=True)
 
@@ -2768,7 +2764,7 @@ class ExplorationDomainUnitTests(test_utils.GenericTestBase):
         ):
             self.new_exploration.validate(strict=True)
 
-    # TODO(bhenning): The validation tests below should be split into separate
+    # TODO(#20377): The validation tests below should be split into separate
     # unit tests. Also, all validation errors should be covered in the tests.
     def test_validation(self) -> None:
         """Test validation of explorations."""
@@ -3195,7 +3191,7 @@ class ExplorationDomainUnitTests(test_utils.GenericTestBase):
         # the codebase we plan to get rid of the tests that intentionally test
         # wrong inputs that we can normally catch by typing.
         interaction.customization_args = {
-            15: state_domain.InteractionCustomizationArg('', {  # type: ignore[dict-item, no-untyped-call]
+            15: state_domain.InteractionCustomizationArg('', {  # type: ignore[dict-item]
                 'type': 'unicode'
             })
         }
@@ -3503,132 +3499,6 @@ class ExplorationDomainUnitTests(test_utils.GenericTestBase):
 
         exploration.validate(strict=True)
 
-    def test_get_trainable_states_dict(self) -> None:
-        """Test the get_trainable_states_dict() method."""
-        exp_id = 'exp_id1'
-        test_exp_filepath = os.path.join(
-            feconf.TESTS_DATA_DIR, 'string_classifier_test.yaml')
-        yaml_content = utils.get_file_contents(test_exp_filepath)
-        assets_list: List[Tuple[str, bytes]] = []
-        exp_services.save_new_exploration_from_yaml_and_assets(
-            feconf.SYSTEM_COMMITTER_ID, yaml_content, exp_id,
-            assets_list)
-
-        exploration_model = exp_models.ExplorationModel.get(
-            exp_id, strict=True)
-        old_states = exp_fetchers.get_exploration_from_model(
-            exploration_model).states
-        exploration = exp_fetchers.get_exploration_by_id(exp_id)
-
-        # Rename a state to add it in unchanged answer group.
-        exploration.rename_state('Home', 'Renamed state')
-        change_list = [exp_domain.ExplorationChange({
-            'cmd': 'rename_state',
-            'old_state_name': 'Home',
-            'new_state_name': 'Renamed state'
-        })]
-
-        expected_dict = {
-            'state_names_with_changed_answer_groups': [],
-            'state_names_with_unchanged_answer_groups': ['Renamed state']
-        }
-        exp_versions_diff = exp_domain.ExplorationVersionsDiff(change_list)
-        actual_dict = exploration.get_trainable_states_dict(
-            old_states, exp_versions_diff)
-        self.assertEqual(actual_dict, expected_dict)
-
-        # Modify answer groups to trigger change in answer groups.
-        state = exploration.states['Renamed state']
-        exploration.states['Renamed state'].interaction.answer_groups.insert(
-            3, state.interaction.answer_groups[3])
-        answer_groups = []
-        for answer_group in state.interaction.answer_groups:
-            answer_groups.append(answer_group.to_dict())
-        change_list = [exp_domain.ExplorationChange({
-            'cmd': 'edit_state_property',
-            'state_name': 'Renamed state',
-            'property_name': 'answer_groups',
-            'new_value': answer_groups
-        })]
-
-        expected_dict = {
-            'state_names_with_changed_answer_groups': ['Renamed state'],
-            'state_names_with_unchanged_answer_groups': []
-        }
-        exp_versions_diff = exp_domain.ExplorationVersionsDiff(change_list)
-        actual_dict = exploration.get_trainable_states_dict(
-            old_states, exp_versions_diff)
-        self.assertEqual(actual_dict, expected_dict)
-
-        # Add new state to trigger change in answer groups.
-        exploration.add_states(['New state'])
-        exploration.states['New state'] = copy.deepcopy(
-            exploration.states['Renamed state'])
-        change_list = [exp_domain.ExplorationChange({
-            'cmd': 'add_state',
-            'state_name': 'New state',
-            'content_id_for_state_content': 'content_0',
-            'content_id_for_default_outcome': 'default_outcome_1'
-        })]
-
-        expected_dict = {
-            'state_names_with_changed_answer_groups': [
-                'Renamed state', 'New state'],
-            'state_names_with_unchanged_answer_groups': []
-        }
-        exp_versions_diff = exp_domain.ExplorationVersionsDiff(change_list)
-        actual_dict = exploration.get_trainable_states_dict(
-            old_states, exp_versions_diff)
-        self.assertEqual(actual_dict, expected_dict)
-
-        # Delete state.
-        exploration.delete_state('New state')
-        change_list = [exp_domain.ExplorationChange({
-            'cmd': 'delete_state',
-            'state_name': 'New state'
-        })]
-
-        expected_dict = {
-            'state_names_with_changed_answer_groups': ['Renamed state'],
-            'state_names_with_unchanged_answer_groups': []
-        }
-        exp_versions_diff = exp_domain.ExplorationVersionsDiff(change_list)
-        actual_dict = exploration.get_trainable_states_dict(
-            old_states, exp_versions_diff)
-        self.assertEqual(actual_dict, expected_dict)
-
-        # Test addition and multiple renames.
-        exploration.add_states(['New state'])
-        exploration.states['New state'] = copy.deepcopy(
-            exploration.states['Renamed state'])
-        exploration.rename_state('New state', 'New state2')
-        exploration.rename_state('New state2', 'New state3')
-        change_list = [exp_domain.ExplorationChange({
-            'cmd': 'add_state',
-            'state_name': 'New state',
-            'content_id_for_state_content': 'content_0',
-            'content_id_for_default_outcome': 'default_outcome_1'
-        }), exp_domain.ExplorationChange({
-            'cmd': 'rename_state',
-            'old_state_name': 'New state',
-            'new_state_name': 'New state2'
-        }), exp_domain.ExplorationChange({
-            'cmd': 'rename_state',
-            'old_state_name': 'New state2',
-            'new_state_name': 'New state3'
-        })]
-
-        expected_dict = {
-            'state_names_with_changed_answer_groups': [
-                'Renamed state', 'New state3'
-            ],
-            'state_names_with_unchanged_answer_groups': []
-        }
-        exp_versions_diff = exp_domain.ExplorationVersionsDiff(change_list)
-        actual_dict = exploration.get_trainable_states_dict(
-            old_states, exp_versions_diff)
-        self.assertEqual(actual_dict, expected_dict)
-
     def test_get_metadata(self) -> None:
         exploration = exp_domain.Exploration.create_default_exploration('0')
         actual_metadata_dict = exploration.get_metadata().to_dict()
@@ -3645,8 +3515,6 @@ class ExplorationDomainUnitTests(test_utils.GenericTestBase):
             'param_specs': {},
             'param_changes': [],
             'auto_tts_enabled': exploration.auto_tts_enabled,
-            'correctness_feedback_enabled': (
-                exploration.correctness_feedback_enabled),
             'edits_allowed': exploration.edits_allowed
         }
 
@@ -3920,21 +3788,6 @@ class ExplorationDomainUnitTests(test_utils.GenericTestBase):
     # TODO(#13059): Here we use MyPy ignore because after we fully type
     # the codebase we plan to get rid of the tests that intentionally test
     # wrong inputs that we can normally catch by typing.
-    def test_validate_exploration_correctness_feedback_enabled(self) -> None:
-        exploration = self.save_new_valid_exploration(
-            'exp_id', 'user@example.com', title='', category='',
-            objective='', end_state_name='End')
-        exploration.validate()
-
-        exploration.correctness_feedback_enabled = 1  # type: ignore[assignment]
-        with self.assertRaisesRegex(
-            Exception,
-            'Expected correctness_feedback_enabled to be a bool, received 1'):
-            exploration.validate()
-
-    # TODO(#13059): Here we use MyPy ignore because after we fully type
-    # the codebase we plan to get rid of the tests that intentionally test
-    # wrong inputs that we can normally catch by typing.
     def test_validate_exploration_next_content_id_index(self) -> None:
         exploration = self.save_new_valid_exploration(
             'exp_id', 'user@example.com', title='', category='',
@@ -4188,6 +4041,258 @@ class ExplorationDomainUnitTests(test_utils.GenericTestBase):
             exploration.to_dict(),
             exp_domain.Exploration.deserialize(
                 exploration.serialize()).to_dict())
+
+    def test_put_exploration_into_cache_and_retrieve_from_cache_to_verify(
+            self
+    ) -> None:
+        """Checks if the caching service is working properly for the
+        Exploration object. Verifies whether the Exploration object stored
+        in the cache is the same as the one retrieved from it.
+        """
+        init_state_name = feconf.DEFAULT_INIT_STATE_NAME
+        exploration_id = 'expid_12145'
+        title = feconf.DEFAULT_EXPLORATION_TITLE
+        category = feconf.DEFAULT_EXPLORATION_CATEGORY
+        objective = feconf.DEFAULT_EXPLORATION_OBJECTIVE
+        language_code = constants.DEFAULT_LANGUAGE_CODE
+        content_id_generator = translation_domain.ContentIdGenerator()
+        init_state_dict = state_domain.State.create_default_state(
+            init_state_name,
+            content_id_generator.generate(
+                translation_domain.ContentType.CONTENT),
+            content_id_generator.generate(
+                translation_domain.ContentType.DEFAULT_OUTCOME),
+            is_initial_state=True).to_dict()
+        states_dict = {
+            init_state_name: init_state_dict
+        }
+        new_exploration = exp_domain.Exploration(
+              exploration_id, title, category, objective, language_code, [],
+                '', '', feconf.CURRENT_STATE_SCHEMA_VERSION,
+              init_state_name, states_dict, {}, [], 0,
+              feconf.DEFAULT_AUTO_TTS_ENABLED,
+              content_id_generator.next_content_id_index, True)
+        sub_namespace = (
+            str(new_exploration.version) if new_exploration.version else None)
+        is_properly_cacheable = caching_services.set_multi(
+            namespace=caching_services.CACHE_NAMESPACE_EXPLORATION,
+            sub_namespace=sub_namespace,
+            id_value_mapping={exploration_id: new_exploration})
+        new_exploration_retrieve_from_cache = caching_services.get_multi(
+            namespace=caching_services.CACHE_NAMESPACE_EXPLORATION,
+            sub_namespace=sub_namespace,
+            obj_ids=[exploration_id]
+        ).get(exploration_id)
+        self.assertTrue(
+            is_properly_cacheable,
+            """The operation to store the Exploration object in the cache
+            has failed"""
+        )
+        self.assertIsNotNone(
+            new_exploration_retrieve_from_cache,
+            """Expected the Exploration object to be retrieved from the
+            cache, but it was None."""
+        )
+        assert new_exploration_retrieve_from_cache is not None
+        new_exploration_dict_retrieve_from_cache = (
+            new_exploration_retrieve_from_cache.to_dict())
+        self.assertEqual(
+            new_exploration.to_dict(),
+            new_exploration_dict_retrieve_from_cache,
+            """Exploration object put into cache and retrieved from cache is
+            not same"""
+        )
+
+    @mock.patch('core.domain.caching_services._get_memcache_key')
+    def test_migrate_state_schema(
+        self,
+        mock_import_module: mock.MagicMock
+    ) -> None:
+        """Checks if the state schema version is migrated properly.
+        The process involves storing an older version of Exploration object
+        with an older state schema version in the cache. This is achieved
+        by passing the Exploration object through the serialize function
+        before storing it in the cache. When the Exploration object is
+        retrieved from the cache, it is passed through the deserialize
+        function. Inside the deserialize function, the migrate_state_schema
+        function is called to migrate the state schema version. Additionally,
+        the old version yaml convert to latest Exploration object.
+        It verifies whether the these objects are equal.
+        """
+        old_version_yaml_content: str = (
+            """author_notes: ''
+auto_tts_enabled: false
+blurb: ''
+category: Category
+edits_allowed: true
+init_state_name: (untitled state)
+language_code: en
+objective: ''
+param_changes: []
+param_specs: {}
+schema_version: 46
+states:
+  (untitled state):
+    classifier_model_id: null
+    content:
+      content_id: content
+      html: ''
+    interaction:
+      answer_groups:
+      - outcome:
+          dest: END
+          dest_if_really_stuck: null
+          feedback:
+            content_id: feedback_1
+            html: <p>Correct!</p>
+          labelled_as_correct: false
+          missing_prerequisite_skill_id: null
+          param_changes: []
+          refresher_exploration_id: null
+        rule_specs:
+        - inputs:
+            x:
+            - <p>Choice 1</p>
+            - <p>Choice 2</p>
+            - <p>Choice Invalid</p>
+          rule_type: Equals
+        tagged_skill_misconception_id: null
+        training_data: []
+      confirmed_unclassified_answers: []
+      customization_args:
+        choices:
+          value:
+          - content_id: ca_choices_2
+            html: <p>Choice 1</p>
+          - content_id: ca_choices_3
+            html: <p>Choice 2</p>
+        maxAllowableSelectionCount:
+          value: 2
+        minAllowableSelectionCount:
+          value: 1
+      default_outcome:
+        dest: (untitled state)
+        dest_if_really_stuck: null
+        feedback:
+          content_id: default_outcome
+          html: ''
+        labelled_as_correct: false
+        missing_prerequisite_skill_id: null
+        param_changes: []
+        refresher_exploration_id: null
+      hints: []
+      id: ItemSelectionInput
+      solution:
+        answer_is_exclusive: true
+        correct_answer:
+          - <p>Choice 1</p>
+        explanation:
+          content_id: solution
+          html: This is <i>solution</i> for state1
+    next_content_id_index: 4
+    param_changes: []
+    recorded_voiceovers:
+      voiceovers_mapping:
+        ca_choices_2: {}
+        ca_choices_3: {}
+        content: {}
+        default_outcome: {}
+        feedback_1: {}
+        solution: {}
+    solicit_answer_details: false
+    written_translations:
+      translations_mapping:
+        ca_choices_2: {}
+        ca_choices_3: {}
+        content: {}
+        default_outcome: {}
+        feedback_1: {}
+        solution: {}
+  END:
+    classifier_model_id: null
+    content:
+      content_id: content
+      html: <p>Congratulations, you have finished!</p>
+    interaction:
+      answer_groups: []
+      confirmed_unclassified_answers: []
+      customization_args:
+        recommendedExplorationIds:
+          value: []
+      default_outcome: null
+      hints: []
+      id: EndExploration
+      solution: null
+    next_content_id_index: 0
+    param_changes: []
+    recorded_voiceovers:
+      voiceovers_mapping:
+        content: {}
+    solicit_answer_details: false
+    written_translations:
+      translations_mapping:
+        content: {}
+states_schema_version: 41
+tags: []
+title: Title
+""")
+        mock_import_module.return_value = 'mocked_memcache_key'
+        exploration_id = 'mocked_memcache_key'
+        old_version_exploration = (
+            create_old_schema_exploration(
+            exploration_id, old_version_yaml_content))
+        latest_version_exploration = exp_domain.Exploration.from_yaml(
+            exploration_id, old_version_yaml_content)
+        self.assertNotEqual(
+            old_version_exploration.to_dict(),
+            latest_version_exploration.to_dict(),
+            """Old version Exploration schema is not same as latest Exploration
+            schema"""
+        )
+        sub_namespace = str(old_version_exploration.version)
+        # Here we use MyPy ignore because no overload variant
+        # of "set_multi" matches argument types
+        # "Dict[str, OldVersionExploration]".
+        is_properly_cacheable = caching_services.set_multi( # type: ignore[call-overload]
+            namespace=caching_services.CACHE_NAMESPACE_EXPLORATION,
+            sub_namespace=sub_namespace,
+            id_value_mapping={'mocked_memcache_key': old_version_exploration})
+        self.assertTrue(
+            is_properly_cacheable,
+            """The operation to store the Exploration object in the cache
+            has succeeded."""
+        )
+        new_exploration_retrieve_from_cache = caching_services.get_multi(
+            namespace=caching_services.CACHE_NAMESPACE_EXPLORATION,
+            sub_namespace=sub_namespace,
+            obj_ids=[exploration_id]
+        ).get(exploration_id)
+        self.assertIsNotNone(
+            new_exploration_retrieve_from_cache,
+            """Expected the Exploration object to be retrieved from the
+            cache, but it was not None."""
+        )
+        assert new_exploration_retrieve_from_cache is not None
+        updated_exploration = new_exploration_retrieve_from_cache.to_dict()
+        new_exploration_dict = old_version_exploration.to_dict()
+        versioned_states = exp_domain.VersionedExplorationStatesDict(
+            states_schema_version=feconf.CURRENT_STATE_SCHEMA_VERSION - 1,
+            states=new_exploration_dict['states'])
+        self.assertEqual(
+            updated_exploration['states_schema_version'],
+            feconf.CURRENT_STATE_SCHEMA_VERSION,
+            'Exploration state schema version failed to update'
+        )
+        self.assertNotEqual(
+            updated_exploration['states'],
+            versioned_states['states'],
+            'Migration to the latest state schema version has failed'
+        )
+        self.assertEqual(
+            updated_exploration['states'],
+            latest_version_exploration.to_dict()['states'],
+            'Migration to the latest state schema version has failed'
+        )
 
     def test_get_all_translatable_content_for_exp(self) -> None:
         """Get all translatable fields from exploration."""
@@ -4665,12 +4770,97 @@ class ExplorationSummaryTests(test_utils.GenericTestBase):
 class YamlCreationUnitTests(test_utils.GenericTestBase):
     """Test creation of explorations from YAML files."""
 
+    SAMPLE_YAML_CONTENT: str = (
+        """author_notes: ''
+auto_tts_enabled: false
+blurb: ''
+category: Category
+edits_allowed: true
+init_state_name: %s
+language_code: en
+next_content_id_index: 4
+objective: ''
+param_changes: []
+param_specs: {}
+schema_version: %d
+states:
+  %s:
+    card_is_checkpoint: true
+    classifier_model_id: null
+    content:
+      content_id: content_0
+      html: ''
+    inapplicable_skill_misconception_ids: []
+    interaction:
+      answer_groups: []
+      confirmed_unclassified_answers: []
+      customization_args: {}
+      default_outcome:
+        dest: %s
+        dest_if_really_stuck: null
+        feedback:
+          content_id: default_outcome_1
+          html: ''
+        labelled_as_correct: false
+        missing_prerequisite_skill_id: null
+        param_changes: []
+        refresher_exploration_id: null
+      hints: []
+      id: null
+      solution: null
+    linked_skill_id: null
+    param_changes: []
+    recorded_voiceovers:
+      voiceovers_mapping:
+        content_0: {}
+        default_outcome_1: {}
+    solicit_answer_details: false
+  New state:
+    card_is_checkpoint: false
+    classifier_model_id: null
+    content:
+      content_id: content_2
+      html: ''
+    inapplicable_skill_misconception_ids: []
+    interaction:
+      answer_groups: []
+      confirmed_unclassified_answers: []
+      customization_args: {}
+      default_outcome:
+        dest: New state
+        dest_if_really_stuck: null
+        feedback:
+          content_id: default_outcome_3
+          html: ''
+        labelled_as_correct: false
+        missing_prerequisite_skill_id: null
+        param_changes: []
+        refresher_exploration_id: null
+      hints: []
+      id: null
+      solution: null
+    linked_skill_id: null
+    param_changes: []
+    recorded_voiceovers:
+      voiceovers_mapping:
+        content_2: {}
+        default_outcome_3: {}
+    solicit_answer_details: false
+states_schema_version: %d
+tags: []
+title: Title
+version: 0
+""") % (
+    feconf.DEFAULT_INIT_STATE_NAME,
+    exp_domain.Exploration.CURRENT_EXP_SCHEMA_VERSION,
+    feconf.DEFAULT_INIT_STATE_NAME, feconf.DEFAULT_INIT_STATE_NAME,
+    feconf.CURRENT_STATE_SCHEMA_VERSION)
+
     YAML_CONTENT_INVALID_SCHEMA_VERSION: Final = (
         """author_notes: ''
 auto_tts_enabled: true
 blurb: ''
 category: Category
-correctness_feedback_enabled: false
 edits_allowed: true
 init_state_name: (untitled state)
 language_code: en
@@ -4684,6 +4874,7 @@ states:
     content:
       content_id: content
       html: ''
+    inapplicable_skill_misconception_ids: []
     interaction:
       answer_groups:
       - outcome:
@@ -4746,6 +4937,7 @@ states:
     content:
       content_id: content
       html: <p>Congratulations, you have finished!</p>
+    inapplicable_skill_misconception_ids: []
     interaction:
       answer_groups: []
       confirmed_unclassified_answers: []
@@ -4770,6 +4962,7 @@ states:
     content:
       content_id: content
       html: ''
+    inapplicable_skill_misconception_ids: []
     interaction:
       answer_groups: []
       confirmed_unclassified_answers: []
@@ -4910,7 +5103,6 @@ class SchemaMigrationUnitTests(test_utils.GenericTestBase):
 auto_tts_enabled: true
 blurb: ''
 category: Category
-correctness_feedback_enabled: false
 edits_allowed: true
 init_state_name: (untitled state)
 language_code: en
@@ -5055,7 +5247,6 @@ title: Title
 auto_tts_enabled: true
 blurb: ''
 category: Category
-correctness_feedback_enabled: false
 edits_allowed: true
 init_state_name: (untitled state)
 language_code: en
@@ -5200,7 +5391,6 @@ title: Title
 auto_tts_enabled: true
 blurb: ''
 category: Category
-correctness_feedback_enabled: false
 edits_allowed: true
 init_state_name: (untitled state)
 language_code: en
@@ -5345,7 +5535,6 @@ title: Title
 auto_tts_enabled: true
 blurb: ''
 category: Category
-correctness_feedback_enabled: false
 edits_allowed: true
 init_state_name: (untitled state)
 language_code: en
@@ -5492,7 +5681,6 @@ title: Title
 auto_tts_enabled: true
 blurb: ''
 category: Category
-correctness_feedback_enabled: false
 edits_allowed: true
 init_state_name: (untitled state)
 language_code: en
@@ -5642,7 +5830,6 @@ title: Title
 auto_tts_enabled: true
 blurb: ''
 category: Category
-correctness_feedback_enabled: false
 edits_allowed: true
 init_state_name: (untitled state)
 language_code: en
@@ -5792,7 +5979,6 @@ title: Title
 auto_tts_enabled: true
 blurb: ''
 category: Category
-correctness_feedback_enabled: false
 edits_allowed: true
 init_state_name: (untitled state)
 language_code: en
@@ -5942,7 +6128,6 @@ title: Title
 auto_tts_enabled: true
 blurb: ''
 category: Category
-correctness_feedback_enabled: false
 edits_allowed: true
 init_state_name: (untitled state)
 language_code: en
@@ -6092,7 +6277,6 @@ title: Title
 auto_tts_enabled: true
 blurb: ''
 category: Category
-correctness_feedback_enabled: false
 edits_allowed: true
 init_state_name: (untitled state)
 language_code: en
@@ -6231,7 +6415,6 @@ title: Title
 auto_tts_enabled: true
 blurb: ''
 category: Category
-correctness_feedback_enabled: false
 init_state_name: (untitled state)
 language_code: en
 objective: ''
@@ -6369,7 +6552,6 @@ title: Title
 auto_tts_enabled: true
 blurb: ''
 category: Category
-correctness_feedback_enabled: false
 init_state_name: (untitled state)
 language_code: en
 objective: ''
@@ -6514,7 +6696,6 @@ title: Title
 auto_tts_enabled: true
 blurb: ''
 category: Category
-correctness_feedback_enabled: false
 init_state_name: (untitled state)
 language_code: en
 objective: ''
@@ -6661,7 +6842,6 @@ title: Title
 auto_tts_enabled: true
 blurb: ''
 category: Category
-correctness_feedback_enabled: false
 init_state_name: (untitled state)
 language_code: en
 objective: ''
@@ -6803,7 +6983,156 @@ tags: []
 title: Title
 """)
 
-    _LATEST_YAML_CONTENT: Final = YAML_CONTENT_V59
+    YAML_CONTENT_V61: Final = (
+        """author_notes: ''
+auto_tts_enabled: true
+blurb: ''
+category: Category
+init_state_name: (untitled state)
+language_code: en
+objective: ''
+param_changes: []
+param_specs: {}
+schema_version: 61
+states:
+  (untitled state):
+    card_is_checkpoint: true
+    classifier_model_id: null
+    content:
+      content_id: content
+      html: ''
+    inapplicable_skill_misconception_ids: []
+    interaction:
+      answer_groups:
+      - outcome:
+          dest: END
+          dest_if_really_stuck: null
+          feedback:
+            content_id: feedback_1
+            html: <p>Correct!</p>
+          labelled_as_correct: false
+          missing_prerequisite_skill_id: null
+          param_changes: []
+          refresher_exploration_id: null
+        rule_specs:
+        - inputs:
+            x: 6
+          rule_type: Equals
+        tagged_skill_misconception_id: null
+        training_data: []
+      confirmed_unclassified_answers: []
+      customization_args:
+        requireNonnegativeInput:
+          value: False
+      default_outcome:
+        dest: (untitled state)
+        dest_if_really_stuck: null
+        feedback:
+          content_id: default_outcome
+          html: ''
+        labelled_as_correct: false
+        missing_prerequisite_skill_id: null
+        param_changes: []
+        refresher_exploration_id: null
+      hints: []
+      id: NumericInput
+      solution: null
+    linked_skill_id: null
+    next_content_id_index: 4
+    param_changes: []
+    recorded_voiceovers:
+      voiceovers_mapping:
+        ca_placeholder_2: {}
+        content: {}
+        default_outcome: {}
+        feedback_1: {}
+        rule_input_3: {}
+    solicit_answer_details: false
+    written_translations:
+      translations_mapping:
+        ca_placeholder_2: {}
+        content: {}
+        default_outcome: {}
+        feedback_1: {}
+        rule_input_3: {}
+  END:
+    card_is_checkpoint: false
+    classifier_model_id: null
+    content:
+      content_id: content
+      html: <p>Congratulations, you have finished!</p>
+    inapplicable_skill_misconception_ids: []
+    interaction:
+      answer_groups: []
+      confirmed_unclassified_answers: []
+      customization_args:
+        recommendedExplorationIds:
+          value: []
+      default_outcome: null
+      hints: []
+      id: EndExploration
+      solution: null
+    linked_skill_id: null
+    next_content_id_index: 0
+    param_changes: []
+    recorded_voiceovers:
+      voiceovers_mapping:
+        content: {}
+    solicit_answer_details: false
+    written_translations:
+      translations_mapping:
+        content: {}
+  New state:
+    classifier_model_id: null
+    content:
+      content_id: content
+      html: ''
+    inapplicable_skill_misconception_ids: []
+    interaction:
+      answer_groups: []
+      confirmed_unclassified_answers: []
+      customization_args:
+        placeholder:
+          value:
+            content_id: ca_placeholder_0
+            unicode_str: ''
+        rows:
+          value: 1
+        catchMisspellings:
+          value: false
+      default_outcome:
+        dest: END
+        dest_if_really_stuck: null
+        feedback:
+          content_id: default_outcome
+          html: ''
+        labelled_as_correct: false
+        missing_prerequisite_skill_id: null
+        param_changes: []
+        refresher_exploration_id: null
+      hints: []
+      id: TextInput
+      solution: null
+    linked_skill_id: null
+    next_content_id_index: 1
+    param_changes: []
+    recorded_voiceovers:
+      voiceovers_mapping:
+        ca_placeholder_0: {}
+        content: {}
+        default_outcome: {}
+    solicit_answer_details: false
+    written_translations:
+      translations_mapping:
+        ca_placeholder_0: {}
+        content: {}
+        default_outcome: {}
+states_schema_version: 56
+tags: []
+title: Title
+""")
+
+    _LATEST_YAML_CONTENT: Final = YAML_CONTENT_V61
 
     def test_load_from_v46_with_item_selection_input_interaction(self) -> None:
         """Tests the migration of ItemSelectionInput rule inputs."""
@@ -6812,7 +7141,6 @@ title: Title
 auto_tts_enabled: false
 blurb: ''
 category: Category
-correctness_feedback_enabled: false
 edits_allowed: true
 init_state_name: (untitled state)
 language_code: en
@@ -6931,7 +7259,6 @@ title: Title
 auto_tts_enabled: false
 blurb: ''
 category: Category
-correctness_feedback_enabled: false
 edits_allowed: true
 init_state_name: (untitled state)
 language_code: en
@@ -6939,7 +7266,7 @@ next_content_id_index: 7
 objective: ''
 param_changes: []
 param_specs: {}
-schema_version: 60
+schema_version: 61
 states:
   (untitled state):
     card_is_checkpoint: true
@@ -6947,6 +7274,7 @@ states:
     content:
       content_id: content_0
       html: ''
+    inapplicable_skill_misconception_ids: []
     interaction:
       answer_groups:
       - outcome:
@@ -7016,6 +7344,7 @@ states:
     content:
       content_id: content_6
       html: <p>Congratulations, you have finished!</p>
+    inapplicable_skill_misconception_ids: []
     interaction:
       answer_groups: []
       confirmed_unclassified_answers: []
@@ -7032,9 +7361,10 @@ states:
       voiceovers_mapping:
         content_6: {}
     solicit_answer_details: false
-states_schema_version: 55
+states_schema_version: 56
 tags: []
 title: Title
+version: 0
 """)
 
         exploration = exp_domain.Exploration.from_yaml(
@@ -7050,7 +7380,6 @@ title: Title
 auto_tts_enabled: true
 blurb: ''
 category: Category
-correctness_feedback_enabled: false
 edits_allowed: true
 init_state_name: (untitled state)
 language_code: en
@@ -7179,7 +7508,6 @@ title: Title
 auto_tts_enabled: true
 blurb: ''
 category: Category
-correctness_feedback_enabled: false
 edits_allowed: true
 init_state_name: (untitled state)
 language_code: en
@@ -7187,7 +7515,7 @@ next_content_id_index: 7
 objective: ''
 param_changes: []
 param_specs: {}
-schema_version: 60
+schema_version: 61
 states:
   (untitled state):
     card_is_checkpoint: true
@@ -7195,6 +7523,7 @@ states:
     content:
       content_id: content_0
       html: ''
+    inapplicable_skill_misconception_ids: []
     interaction:
       answer_groups:
       - outcome:
@@ -7274,6 +7603,7 @@ states:
     content:
       content_id: content_6
       html: <p>Congratulations, you have finished!</p>
+    inapplicable_skill_misconception_ids: []
     interaction:
       answer_groups: []
       confirmed_unclassified_answers: []
@@ -7290,9 +7620,10 @@ states:
       voiceovers_mapping:
         content_6: {}
     solicit_answer_details: false
-states_schema_version: 55
+states_schema_version: 56
 tags: []
 title: Title
+version: 0
 """)
         exploration = exp_domain.Exploration.from_yaml(
             'eid', sample_yaml_content)
@@ -7307,7 +7638,6 @@ title: Title
 auto_tts_enabled: true
 blurb: ''
 category: Category
-correctness_feedback_enabled: false
 edits_allowed: true
 init_state_name: (untitled state)
 language_code: en
@@ -7398,7 +7728,6 @@ title: Title
 auto_tts_enabled: true
 blurb: ''
 category: Category
-correctness_feedback_enabled: false
 edits_allowed: true
 init_state_name: (untitled state)
 language_code: en
@@ -7406,7 +7735,7 @@ next_content_id_index: 4
 objective: ''
 param_changes: []
 param_specs: {}
-schema_version: 60
+schema_version: 61
 states:
   (untitled state):
     card_is_checkpoint: true
@@ -7414,6 +7743,7 @@ states:
     content:
       content_id: content_0
       html: ''
+    inapplicable_skill_misconception_ids: []
     interaction:
       answer_groups: []
       confirmed_unclassified_answers: []
@@ -7449,6 +7779,7 @@ states:
     content:
       content_id: content_3
       html: <p>Congratulations, you have finished!</p>
+    inapplicable_skill_misconception_ids: []
     interaction:
       answer_groups: []
       confirmed_unclassified_answers: []
@@ -7465,9 +7796,10 @@ states:
       voiceovers_mapping:
         content_3: {}
     solicit_answer_details: false
-states_schema_version: 55
+states_schema_version: 56
 tags: []
 title: Title
+version: 0
 """)
         exploration = exp_domain.Exploration.from_yaml(
             'eid', sample_yaml_content)
@@ -7485,7 +7817,6 @@ title: Title
 auto_tts_enabled: false
 blurb: ''
 category: ''
-correctness_feedback_enabled: true
 edits_allowed: true
 init_state_name: Introduction
 language_code: en
@@ -7593,7 +7924,6 @@ title: ''
 auto_tts_enabled: false
 blurb: ''
 category: ''
-correctness_feedback_enabled: true
 edits_allowed: true
 init_state_name: Introduction
 language_code: en
@@ -7601,7 +7931,7 @@ next_content_id_index: 4
 objective: ''
 param_changes: []
 param_specs: {}
-schema_version: 60
+schema_version: 61
 states:
   Introduction:
     card_is_checkpoint: true
@@ -7609,6 +7939,7 @@ states:
     content:
       content_id: content_0
       html: <p>Numeric interaction validation</p>
+    inapplicable_skill_misconception_ids: []
     interaction:
       answer_groups:
       - outcome:
@@ -7658,6 +7989,7 @@ states:
     content:
       content_id: content_3
       html: <p>End interaction</p>
+    inapplicable_skill_misconception_ids: []
     interaction:
       answer_groups: []
       confirmed_unclassified_answers: []
@@ -7674,9 +8006,10 @@ states:
       voiceovers_mapping:
         content_3: {}
     solicit_answer_details: false
-states_schema_version: 55
+states_schema_version: 56
 tags: []
 title: ''
+version: 0
 """)
 
         exploration = exp_domain.Exploration.from_yaml(
@@ -7697,7 +8030,6 @@ title: ''
 auto_tts_enabled: false
 blurb: ''
 category: ''
-correctness_feedback_enabled: true
 edits_allowed: true
 init_state_name: Introduction
 language_code: en
@@ -7850,7 +8182,6 @@ title: ''
 auto_tts_enabled: false
 blurb: ''
 category: ''
-correctness_feedback_enabled: true
 edits_allowed: true
 init_state_name: Introduction
 language_code: en
@@ -7858,7 +8189,7 @@ next_content_id_index: 4
 objective: ''
 param_changes: []
 param_specs: {}
-schema_version: 60
+schema_version: 61
 states:
   Introduction:
     card_is_checkpoint: true
@@ -7906,6 +8237,7 @@ states:
         alt-with-value=\&amp;quot;&amp;amp;amp;quot;&amp;amp;amp;quot;\&amp;quot;
         caption-with-value=\&amp;quot;&amp;amp;amp;quot;&amp;amp;amp;quot;\&amp;quot;
         filepath-with-value=\&amp;quot;&amp;amp;amp;quot;s7TabImage.png&amp;amp;amp;quot;\&amp;quot;&amp;gt;&amp;lt;/oppia-noninteractive-image&amp;gt;&amp;quot;}]"></oppia-noninteractive-tabs>     '
+    inapplicable_skill_misconception_ids: []
     interaction:
       answer_groups: []
       confirmed_unclassified_answers: []
@@ -7946,6 +8278,7 @@ states:
     content:
       content_id: content_3
       html: <p>End interaction</p>
+    inapplicable_skill_misconception_ids: []
     interaction:
       answer_groups: []
       confirmed_unclassified_answers: []
@@ -7965,9 +8298,10 @@ states:
       voiceovers_mapping:
         content_3: {}
     solicit_answer_details: false
-states_schema_version: 55
+states_schema_version: 56
 tags: []
 title: ''
+version: 0
 """)
         exploration = exp_domain.Exploration.from_yaml(
             'eid', sample_yaml_content_for_rte)
@@ -7989,7 +8323,6 @@ title: ''
 auto_tts_enabled: false
 blurb: ''
 category: ''
-correctness_feedback_enabled: true
 edits_allowed: true
 init_state_name: Introduction
 language_code: en
@@ -8097,7 +8430,6 @@ title: ''
 auto_tts_enabled: false
 blurb: ''
 category: ''
-correctness_feedback_enabled: true
 edits_allowed: true
 init_state_name: Introduction
 language_code: en
@@ -8105,7 +8437,7 @@ next_content_id_index: 4
 objective: ''
 param_changes: []
 param_specs: {}
-schema_version: 60
+schema_version: 61
 states:
   Introduction:
     card_is_checkpoint: true
@@ -8113,6 +8445,7 @@ states:
     content:
       content_id: content_0
       html: <p>Continue and End interaction validation</p>
+    inapplicable_skill_misconception_ids: []
     interaction:
       answer_groups: []
       confirmed_unclassified_answers: []
@@ -8158,6 +8491,7 @@ states:
     content:
       content_id: content_3
       html: <p>End interaction</p>
+    inapplicable_skill_misconception_ids: []
     interaction:
       answer_groups: []
       confirmed_unclassified_answers: []
@@ -8177,9 +8511,10 @@ states:
       voiceovers_mapping:
         content_3: {}
     solicit_answer_details: false
-states_schema_version: 55
+states_schema_version: 56
 tags: []
 title: ''
+version: 0
 """)
 
         exploration = exp_domain.Exploration.from_yaml(
@@ -8193,7 +8528,6 @@ title: ''
 auto_tts_enabled: false
 blurb: ''
 category: ''
-correctness_feedback_enabled: true
 edits_allowed: true
 init_state_name: Introduction
 language_code: hi
@@ -8283,7 +8617,6 @@ title: ''
 auto_tts_enabled: false
 blurb: ''
 category: ''
-correctness_feedback_enabled: true
 edits_allowed: true
 init_state_name: Introduction
 language_code: hi
@@ -8291,7 +8624,7 @@ next_content_id_index: 4
 objective: ''
 param_changes: []
 param_specs: {}
-schema_version: 60
+schema_version: 61
 states:
   Introduction:
     card_is_checkpoint: true
@@ -8299,6 +8632,7 @@ states:
     content:
       content_id: content_0
       html: <p>Continue and End interaction validation</p>
+    inapplicable_skill_misconception_ids: []
     interaction:
       answer_groups: []
       confirmed_unclassified_answers: []
@@ -8334,6 +8668,7 @@ states:
     content:
       content_id: content_3
       html: <p>End interaction</p>
+    inapplicable_skill_misconception_ids: []
     interaction:
       answer_groups: []
       confirmed_unclassified_answers: []
@@ -8353,9 +8688,10 @@ states:
       voiceovers_mapping:
         content_3: {}
     solicit_answer_details: false
-states_schema_version: 55
+states_schema_version: 56
 tags: []
 title: ''
+version: 0
 """)
 
         exploration = exp_domain.Exploration.from_yaml(
@@ -8378,7 +8714,6 @@ title: ''
 auto_tts_enabled: false
 blurb: ''
 category: ''
-correctness_feedback_enabled: true
 edits_allowed: true
 init_state_name: Introduction
 language_code: en
@@ -8677,7 +9012,6 @@ title: ''
 auto_tts_enabled: false
 blurb: ''
 category: ''
-correctness_feedback_enabled: true
 edits_allowed: true
 init_state_name: Introduction
 language_code: en
@@ -8685,7 +9019,7 @@ next_content_id_index: 7
 objective: ''
 param_changes: []
 param_specs: {}
-schema_version: 60
+schema_version: 61
 states:
   Introduction:
     card_is_checkpoint: true
@@ -8693,6 +9027,7 @@ states:
     content:
       content_id: content_0
       html: <p>Numeric interaction validation</p>
+    inapplicable_skill_misconception_ids: []
     interaction:
       answer_groups:
       - outcome:
@@ -8805,6 +9140,7 @@ states:
     content:
       content_id: content_6
       html: <p>End interaction</p>
+    inapplicable_skill_misconception_ids: []
     interaction:
       answer_groups: []
       confirmed_unclassified_answers: []
@@ -8821,9 +9157,10 @@ states:
       voiceovers_mapping:
         content_6: {}
     solicit_answer_details: false
-states_schema_version: 55
+states_schema_version: 56
 tags: []
 title: ''
+version: 0
 """)
 
         exploration = exp_domain.Exploration.from_yaml(
@@ -8844,7 +9181,6 @@ title: ''
 auto_tts_enabled: false
 blurb: ''
 category: ''
-correctness_feedback_enabled: true
 edits_allowed: true
 init_state_name: Introduction
 language_code: en
@@ -9095,7 +9431,6 @@ title: ''
 auto_tts_enabled: false
 blurb: ''
 category: ''
-correctness_feedback_enabled: true
 edits_allowed: true
 init_state_name: Introduction
 language_code: en
@@ -9103,7 +9438,7 @@ next_content_id_index: 8
 objective: ''
 param_changes: []
 param_specs: {}
-schema_version: 60
+schema_version: 61
 states:
   Introduction:
     card_is_checkpoint: true
@@ -9111,6 +9446,7 @@ states:
     content:
       content_id: content_0
       html: <p>Numeric interaction validation</p>
+    inapplicable_skill_misconception_ids: []
     interaction:
       answer_groups:
       - outcome:
@@ -9232,6 +9568,7 @@ states:
     content:
       content_id: content_7
       html: <p>End interaction</p>
+    inapplicable_skill_misconception_ids: []
     interaction:
       answer_groups: []
       confirmed_unclassified_answers: []
@@ -9248,9 +9585,10 @@ states:
       voiceovers_mapping:
         content_7: {}
     solicit_answer_details: false
-states_schema_version: 55
+states_schema_version: 56
 tags: []
 title: ''
+version: 0
 """)
 
         exploration = exp_domain.Exploration.from_yaml(
@@ -9264,7 +9602,6 @@ title: ''
 auto_tts_enabled: false
 blurb: ''
 category: ''
-correctness_feedback_enabled: true
 edits_allowed: true
 init_state_name: Introduction
 language_code: en
@@ -9391,7 +9728,6 @@ title: ''
 auto_tts_enabled: false
 blurb: ''
 category: ''
-correctness_feedback_enabled: true
 edits_allowed: true
 init_state_name: Introduction
 language_code: en
@@ -9399,7 +9735,7 @@ next_content_id_index: 5
 objective: ''
 param_changes: []
 param_specs: {}
-schema_version: 60
+schema_version: 61
 states:
   Introduction:
     card_is_checkpoint: true
@@ -9407,6 +9743,7 @@ states:
     content:
       content_id: content_0
       html: <p>Numeric interaction validation</p>
+    inapplicable_skill_misconception_ids: []
     interaction:
       answer_groups:
       - outcome:
@@ -9469,6 +9806,7 @@ states:
     content:
       content_id: content_4
       html: <p>End interaction</p>
+    inapplicable_skill_misconception_ids: []
     interaction:
       answer_groups: []
       confirmed_unclassified_answers: []
@@ -9485,9 +9823,10 @@ states:
       voiceovers_mapping:
         content_4: {}
     solicit_answer_details: false
-states_schema_version: 55
+states_schema_version: 56
 tags: []
 title: ''
+version: 0
 """)
 
         exploration = exp_domain.Exploration.from_yaml(
@@ -9508,7 +9847,6 @@ title: ''
 auto_tts_enabled: false
 blurb: ''
 category: ''
-correctness_feedback_enabled: true
 edits_allowed: true
 init_state_name: Introduction
 language_code: en
@@ -9681,7 +10019,6 @@ title: ''
 auto_tts_enabled: false
 blurb: ''
 category: ''
-correctness_feedback_enabled: true
 edits_allowed: true
 init_state_name: Introduction
 language_code: en
@@ -9689,7 +10026,7 @@ next_content_id_index: 8
 objective: ''
 param_changes: []
 param_specs: {}
-schema_version: 60
+schema_version: 61
 states:
   Introduction:
     card_is_checkpoint: true
@@ -9697,6 +10034,7 @@ states:
     content:
       content_id: content_0
       html: <p>Numeric interaction validation</p>
+    inapplicable_skill_misconception_ids: []
     interaction:
       answer_groups:
       - outcome:
@@ -9779,6 +10117,7 @@ states:
     content:
       content_id: content_7
       html: <p>End interaction</p>
+    inapplicable_skill_misconception_ids: []
     interaction:
       answer_groups: []
       confirmed_unclassified_answers: []
@@ -9795,9 +10134,10 @@ states:
       voiceovers_mapping:
         content_7: {}
     solicit_answer_details: false
-states_schema_version: 55
+states_schema_version: 56
 tags: []
 title: ''
+version: 0
 """)
 
         exploration = exp_domain.Exploration.from_yaml(
@@ -9820,7 +10160,6 @@ title: ''
 auto_tts_enabled: false
 blurb: ''
 category: ''
-correctness_feedback_enabled: true
 edits_allowed: true
 init_state_name: Introduction
 language_code: en
@@ -9986,7 +10325,6 @@ title: ''
 auto_tts_enabled: false
 blurb: ''
 category: ''
-correctness_feedback_enabled: true
 edits_allowed: true
 init_state_name: Introduction
 language_code: en
@@ -9994,7 +10332,7 @@ next_content_id_index: 10
 objective: ''
 param_changes: []
 param_specs: {}
-schema_version: 60
+schema_version: 61
 states:
   Introduction:
     card_is_checkpoint: true
@@ -10002,6 +10340,7 @@ states:
     content:
       content_id: content_0
       html: <p>Numeric interaction validation</p>
+    inapplicable_skill_misconception_ids: []
     interaction:
       answer_groups:
       - outcome:
@@ -10106,6 +10445,7 @@ states:
     content:
       content_id: content_9
       html: <p>End interaction</p>
+    inapplicable_skill_misconception_ids: []
     interaction:
       answer_groups: []
       confirmed_unclassified_answers: []
@@ -10122,9 +10462,10 @@ states:
       voiceovers_mapping:
         content_9: {}
     solicit_answer_details: false
-states_schema_version: 55
+states_schema_version: 56
 tags: []
 title: ''
+version: 0
 """)
 
         exploration = exp_domain.Exploration.from_yaml(
@@ -10138,7 +10479,6 @@ title: ''
 auto_tts_enabled: false
 blurb: ''
 category: ''
-correctness_feedback_enabled: true
 edits_allowed: true
 init_state_name: Introduction
 language_code: en
@@ -10329,6 +10669,7 @@ states:
 states_schema_version: 52
 tags: []
 title: ''
+version: 0
 """)
 
         latest_sample_yaml_content_for_item_selection_interac_2: str = (
@@ -10336,7 +10677,6 @@ title: ''
 auto_tts_enabled: false
 blurb: ''
 category: ''
-correctness_feedback_enabled: true
 edits_allowed: true
 init_state_name: Introduction
 language_code: en
@@ -10344,7 +10684,7 @@ next_content_id_index: 7
 objective: ''
 param_changes: []
 param_specs: {}
-schema_version: 60
+schema_version: 61
 states:
   Introduction:
     card_is_checkpoint: true
@@ -10352,6 +10692,7 @@ states:
     content:
       content_id: content_0
       html: <p>Numeric interaction validation</p>
+    inapplicable_skill_misconception_ids: []
     interaction:
       answer_groups:
       - outcome:
@@ -10423,6 +10764,7 @@ states:
     content:
       content_id: content_6
       html: <p>End interaction</p>
+    inapplicable_skill_misconception_ids: []
     interaction:
       answer_groups: []
       confirmed_unclassified_answers: []
@@ -10439,9 +10781,10 @@ states:
       voiceovers_mapping:
         content_6: {}
     solicit_answer_details: false
-states_schema_version: 55
+states_schema_version: 56
 tags: []
 title: ''
+version: 0
 """)
 
         exploration = exp_domain.Exploration.from_yaml(
@@ -10455,7 +10798,6 @@ title: ''
 auto_tts_enabled: false
 blurb: ''
 category: ''
-correctness_feedback_enabled: true
 edits_allowed: true
 init_state_name: Introduction
 language_code: en
@@ -10589,6 +10931,7 @@ states:
 states_schema_version: 52
 tags: []
 title: ''
+version: 0
 """)
 
         latest_sample_yaml_content_for_item_selection_interac_3: str = (
@@ -10596,7 +10939,6 @@ title: ''
 auto_tts_enabled: false
 blurb: ''
 category: ''
-correctness_feedback_enabled: true
 edits_allowed: true
 init_state_name: Introduction
 language_code: en
@@ -10604,7 +10946,7 @@ next_content_id_index: 8
 objective: ''
 param_changes: []
 param_specs: {}
-schema_version: 60
+schema_version: 61
 states:
   Introduction:
     card_is_checkpoint: true
@@ -10612,6 +10954,7 @@ states:
     content:
       content_id: content_0
       html: <p>Numeric interaction validation</p>
+    inapplicable_skill_misconception_ids: []
     interaction:
       answer_groups:
       - outcome:
@@ -10679,6 +11022,7 @@ states:
     content:
       content_id: content_7
       html: <p>End interaction</p>
+    inapplicable_skill_misconception_ids: []
     interaction:
       answer_groups: []
       confirmed_unclassified_answers: []
@@ -10695,9 +11039,10 @@ states:
       voiceovers_mapping:
         content_7: {}
     solicit_answer_details: false
-states_schema_version: 55
+states_schema_version: 56
 tags: []
 title: ''
+version: 0
 """)
 
         exploration = exp_domain.Exploration.from_yaml(
@@ -10711,7 +11056,6 @@ title: ''
 auto_tts_enabled: false
 blurb: ''
 category: ''
-correctness_feedback_enabled: true
 edits_allowed: true
 init_state_name: Introduction
 language_code: en
@@ -10817,6 +11161,7 @@ states:
 states_schema_version: 52
 tags: []
 title: ''
+version: 0
 """)
 
         latest_sample_yaml_content_for_item_selection_interac_4: str = (
@@ -10824,7 +11169,6 @@ title: ''
 auto_tts_enabled: false
 blurb: ''
 category: ''
-correctness_feedback_enabled: true
 edits_allowed: true
 init_state_name: Introduction
 language_code: en
@@ -10832,7 +11176,7 @@ next_content_id_index: 6
 objective: ''
 param_changes: []
 param_specs: {}
-schema_version: 60
+schema_version: 61
 states:
   Introduction:
     card_is_checkpoint: true
@@ -10840,6 +11184,7 @@ states:
     content:
       content_id: content_0
       html: <p>Numeric interaction validation</p>
+    inapplicable_skill_misconception_ids: []
     interaction:
       answer_groups:
       - outcome:
@@ -10900,6 +11245,7 @@ states:
     content:
       content_id: content_5
       html: <p>End interaction</p>
+    inapplicable_skill_misconception_ids: []
     interaction:
       answer_groups: []
       confirmed_unclassified_answers: []
@@ -10916,9 +11262,10 @@ states:
       voiceovers_mapping:
         content_5: {}
     solicit_answer_details: false
-states_schema_version: 55
+states_schema_version: 56
 tags: []
 title: ''
+version: 0
 """)
 
         exploration = exp_domain.Exploration.from_yaml(
@@ -10939,7 +11286,6 @@ title: ''
 auto_tts_enabled: false
 blurb: ''
 category: ''
-correctness_feedback_enabled: true
 edits_allowed: true
 init_state_name: Introduction
 language_code: en
@@ -11162,7 +11508,6 @@ title: ''
 auto_tts_enabled: false
 blurb: ''
 category: ''
-correctness_feedback_enabled: true
 edits_allowed: true
 init_state_name: Introduction
 language_code: en
@@ -11170,7 +11515,7 @@ next_content_id_index: 9
 objective: ''
 param_changes: []
 param_specs: {}
-schema_version: 60
+schema_version: 61
 states:
   Introduction:
     card_is_checkpoint: true
@@ -11178,6 +11523,7 @@ states:
     content:
       content_id: content_0
       html: <p>Numeric interaction validation</p>
+    inapplicable_skill_misconception_ids: []
     interaction:
       answer_groups:
       - outcome:
@@ -11267,6 +11613,7 @@ states:
     content:
       content_id: content_8
       html: <p>End interaction</p>
+    inapplicable_skill_misconception_ids: []
     interaction:
       answer_groups: []
       confirmed_unclassified_answers: []
@@ -11283,9 +11630,10 @@ states:
       voiceovers_mapping:
         content_8: {}
     solicit_answer_details: false
-states_schema_version: 55
+states_schema_version: 56
 tags: []
 title: ''
+version: 0
 """)
         exploration = exp_domain.Exploration.from_yaml(
             'eid', sample_yaml_content_for_drag_and_drop_interac_1)
@@ -11298,7 +11646,6 @@ title: ''
 auto_tts_enabled: false
 blurb: ''
 category: ''
-correctness_feedback_enabled: true
 edits_allowed: true
 init_state_name: Introduction
 language_code: en
@@ -11445,7 +11792,6 @@ title: ''
 auto_tts_enabled: false
 blurb: ''
 category: ''
-correctness_feedback_enabled: true
 edits_allowed: true
 init_state_name: Introduction
 language_code: en
@@ -11453,7 +11799,7 @@ next_content_id_index: 8
 objective: ''
 param_changes: []
 param_specs: {}
-schema_version: 60
+schema_version: 61
 states:
   Introduction:
     card_is_checkpoint: true
@@ -11461,6 +11807,7 @@ states:
     content:
       content_id: content_0
       html: <p>Numeric interaction validation</p>
+    inapplicable_skill_misconception_ids: []
     interaction:
       answer_groups:
       - outcome:
@@ -11546,6 +11893,7 @@ states:
     content:
       content_id: content_7
       html: <p>End interaction</p>
+    inapplicable_skill_misconception_ids: []
     interaction:
       answer_groups: []
       confirmed_unclassified_answers: []
@@ -11562,9 +11910,10 @@ states:
       voiceovers_mapping:
         content_7: {}
     solicit_answer_details: false
-states_schema_version: 55
+states_schema_version: 56
 tags: []
 title: ''
+version: 0
 """)
 
         exploration = exp_domain.Exploration.from_yaml(
@@ -11578,7 +11927,6 @@ title: ''
 auto_tts_enabled: false
 blurb: ''
 category: ''
-correctness_feedback_enabled: true
 edits_allowed: true
 init_state_name: Introduction
 language_code: en
@@ -11723,6 +12071,7 @@ states:
 states_schema_version: 52
 tags: []
 title: ''
+version: 0
 """)
 
         latest_sample_yaml_content_for_drag_and_drop_interac_3: str = (
@@ -11730,7 +12079,6 @@ title: ''
 auto_tts_enabled: false
 blurb: ''
 category: ''
-correctness_feedback_enabled: true
 edits_allowed: true
 init_state_name: Introduction
 language_code: en
@@ -11738,7 +12086,7 @@ next_content_id_index: 7
 objective: ''
 param_changes: []
 param_specs: {}
-schema_version: 60
+schema_version: 61
 states:
   Introduction:
     card_is_checkpoint: true
@@ -11746,6 +12094,7 @@ states:
     content:
       content_id: content_0
       html: <p>Numeric interaction validation</p>
+    inapplicable_skill_misconception_ids: []
     interaction:
       answer_groups:
       - outcome:
@@ -11818,6 +12167,7 @@ states:
     content:
       content_id: content_6
       html: <p>End interaction</p>
+    inapplicable_skill_misconception_ids: []
     interaction:
       answer_groups: []
       confirmed_unclassified_answers: []
@@ -11834,9 +12184,10 @@ states:
       voiceovers_mapping:
         content_6: {}
     solicit_answer_details: false
-states_schema_version: 55
+states_schema_version: 56
 tags: []
 title: ''
+version: 0
 """)
 
         exploration = exp_domain.Exploration.from_yaml(
@@ -11856,7 +12207,6 @@ title: ''
 auto_tts_enabled: false
 blurb: ''
 category: ''
-correctness_feedback_enabled: true
 edits_allowed: true
 init_state_name: Introduction
 language_code: en
@@ -12131,7 +12481,6 @@ title: ''
 auto_tts_enabled: false
 blurb: ''
 category: ''
-correctness_feedback_enabled: true
 edits_allowed: true
 init_state_name: Introduction
 language_code: en
@@ -12139,7 +12488,7 @@ next_content_id_index: 15
 objective: ''
 param_changes: []
 param_specs: {}
-schema_version: 60
+schema_version: 61
 states:
   Introduction:
     card_is_checkpoint: true
@@ -12147,6 +12496,7 @@ states:
     content:
       content_id: content_0
       html: <p>Numeric interaction validation</p>
+    inapplicable_skill_misconception_ids: []
     interaction:
       answer_groups:
       - outcome:
@@ -12299,6 +12649,7 @@ states:
     content:
       content_id: content_14
       html: <p>End interaction</p>
+    inapplicable_skill_misconception_ids: []
     interaction:
       answer_groups: []
       confirmed_unclassified_answers: []
@@ -12315,9 +12666,10 @@ states:
       voiceovers_mapping:
         content_14: {}
     solicit_answer_details: false
-states_schema_version: 55
+states_schema_version: 56
 tags: []
 title: ''
+version: 0
 """)
 
         exploration = exp_domain.Exploration.from_yaml(
@@ -12331,7 +12683,6 @@ title: ''
 auto_tts_enabled: false
 blurb: ''
 category: ''
-correctness_feedback_enabled: true
 edits_allowed: true
 init_state_name: Introduction
 language_code: en
@@ -12443,7 +12794,6 @@ title: ''
 auto_tts_enabled: false
 blurb: ''
 category: ''
-correctness_feedback_enabled: true
 edits_allowed: true
 init_state_name: Introduction
 language_code: en
@@ -12451,7 +12801,7 @@ next_content_id_index: 6
 objective: ''
 param_changes: []
 param_specs: {}
-schema_version: 60
+schema_version: 61
 states:
   Introduction:
     card_is_checkpoint: true
@@ -12459,6 +12809,7 @@ states:
     content:
       content_id: content_0
       html: <p>Numeric interaction validation</p>
+    inapplicable_skill_misconception_ids: []
     interaction:
       answer_groups:
       - outcome:
@@ -12520,6 +12871,7 @@ states:
     content:
       content_id: content_5
       html: <p>End interaction</p>
+    inapplicable_skill_misconception_ids: []
     interaction:
       answer_groups: []
       confirmed_unclassified_answers: []
@@ -12536,9 +12888,10 @@ states:
       voiceovers_mapping:
         content_5: {}
     solicit_answer_details: false
-states_schema_version: 55
+states_schema_version: 56
 tags: []
 title: ''
+version: 0
 """)
 
         exploration = exp_domain.Exploration.from_yaml(
@@ -12572,6 +12925,7 @@ class ConversionUnitTests(test_utils.GenericTestBase):
                 translation_domain.ContentType.DEFAULT_OUTCOME)
             return {
                 'linked_skill_id': None,
+                'inapplicable_skill_misconception_ids': [],
                 'classifier_model_id': None,
                 'content': {
                     'content_id': content_id_for_content,
@@ -12615,7 +12969,7 @@ class ConversionUnitTests(test_utils.GenericTestBase):
             'objective': feconf.DEFAULT_EXPLORATION_OBJECTIVE,
             'states': {
                 feconf.DEFAULT_INIT_STATE_NAME: _get_default_state_dict(
-                    feconf.DEFAULT_INIT_STATE_CONTENT_STR,
+                    feconf.DEFAULT_STATE_CONTENT_STR,
                     feconf.DEFAULT_INIT_STATE_NAME, True, content_id_generator),
                 second_state_name: _get_default_state_dict(
                     '', second_state_name, False, content_id_generator),
@@ -12623,7 +12977,6 @@ class ConversionUnitTests(test_utils.GenericTestBase):
             'param_changes': [],
             'param_specs': {},
             'language_code': 'en',
-            'correctness_feedback_enabled': True,
             'next_content_id_index': content_id_generator.next_content_id_index
         })
 
@@ -16375,10 +16728,6 @@ class ExplorationChangesMergeabilityUnitTests(
             'property_name': 'auto_tts_enabled',
             'new_value': False
         }), exp_domain.ExplorationChange({
-            'cmd': 'edit_exploration_property',
-            'property_name': 'correctness_feedback_enabled',
-            'new_value': True
-        }), exp_domain.ExplorationChange({
             'cmd': 'edit_state_property',
             'property_name': 'confirmed_unclassified_answers',
             'state_name': 'Introduction',
@@ -17837,204 +18186,89 @@ class ExplorationChangesMergeabilityUnitTests(
             self.EXP_0_ID, 3, change_list)
         self.assertEqual(changes_are_not_mergeable, False)
 
+    @test_utils.set_platform_parameters(
+        [(platform_parameter_list.ParamName.SERVER_CAN_SEND_EMAILS, True)]
+    )
     def test_email_is_sent_to_admin_in_case_of_adding_deleting_state_changes(
         self
     ) -> None:
         self.login(self.OWNER_EMAIL)
-        with self.swap(feconf, 'CAN_SEND_EMAILS', True):
-            messages = self._get_sent_email_messages(
-                feconf.ADMIN_EMAIL_ADDRESS)
-            self.assertEqual(len(messages), 0)
-            self.save_new_valid_exploration(
-                self.EXP_0_ID, self.owner_id, end_state_name='End')
+        messages = self._get_sent_email_messages(
+            feconf.ADMIN_EMAIL_ADDRESS)
+        self.assertEqual(len(messages), 0)
+        self.save_new_valid_exploration(
+            self.EXP_0_ID, self.owner_id, end_state_name='End')
 
-            rights_manager.publish_exploration(self.owner, self.EXP_0_ID)
+        rights_manager.publish_exploration(self.owner, self.EXP_0_ID)
 
-            test_dict: Dict[str, str] = {}
-            # Changes to the various properties of the first and
-            # second state.
-            change_list = [exp_domain.ExplorationChange({
-                'old_value': 'TextInput',
-                'cmd': 'edit_state_property',
-                'property_name': 'widget_id',
-                'new_value': None,
-                'state_name': 'Introduction'
-            }), exp_domain.ExplorationChange({
-                'old_value': {
-                    'placeholder': {
-                        'value': {
-                            'content_id': self.content_id_generator.generate(
-                            translation_domain.ContentType.FEEDBACK),
-                            'unicode_str': ''
-                        }
-                    },
-                    'rows': {
-                        'value': 1
-                    },
-                    'catchMisspellings': {
-                        'value': False
+        test_dict: Dict[str, str] = {}
+        # Changes to the various properties of the first and
+        # second state.
+        change_list = [exp_domain.ExplorationChange({
+            'old_value': 'TextInput',
+            'cmd': 'edit_state_property',
+            'property_name': 'widget_id',
+            'new_value': None,
+            'state_name': 'Introduction'
+        }), exp_domain.ExplorationChange({
+            'old_value': {
+                'placeholder': {
+                    'value': {
+                        'content_id': self.content_id_generator.generate(
+                        translation_domain.ContentType.FEEDBACK),
+                        'unicode_str': ''
                     }
                 },
-                'cmd': 'edit_state_property',
-                'property_name': 'widget_customization_args',
-                'new_value': test_dict,
-                'state_name': 'Introduction'
-            }), exp_domain.ExplorationChange({
-                'old_value': None,
-                'cmd': 'edit_state_property',
-                'property_name': 'widget_id',
-                'new_value': 'NumericInput',
-                'state_name': 'Introduction'
-            }), exp_domain.ExplorationChange({
-                'state_name': 'Introduction',
-                'old_value':
+                'rows': {
+                    'value': 1
+                },
+                'catchMisspellings': {
+                    'value': False
+                }
+            },
+            'cmd': 'edit_state_property',
+            'property_name': 'widget_customization_args',
+            'new_value': test_dict,
+            'state_name': 'Introduction'
+        }), exp_domain.ExplorationChange({
+            'old_value': None,
+            'cmd': 'edit_state_property',
+            'property_name': 'widget_id',
+            'new_value': 'NumericInput',
+            'state_name': 'Introduction'
+        }), exp_domain.ExplorationChange({
+            'state_name': 'Introduction',
+            'old_value':
+            {
+                'requireNonnegativeInput':
                 {
-                    'requireNonnegativeInput':
-                    {
-                        'value': True
-                    }
-                },
-                'property_name': 'widget_customization_args',
-                'new_value':
+                    'value': True
+                }
+            },
+            'property_name': 'widget_customization_args',
+            'new_value':
+            {
+                'requireNonnegativeInput':
                 {
-                    'requireNonnegativeInput':
-                    {
-                        'value': False
-                    }
-                },
-                'cmd': 'edit_state_property'
-            }), exp_domain.ExplorationChange({
-                'old_value': ['old_value'],
-                'cmd': 'edit_state_property',
-                'property_name': 'answer_groups',
-                'new_value': [
-                    {
-                        'tagged_skill_misconception_id': None,
-                        'rule_specs': [
-                            {
-                                'rule_type': 'IsLessThanOrEqualTo',
-                                'inputs': {
-                                    'x': 50
-                                }
+                    'value': False
+                }
+            },
+            'cmd': 'edit_state_property'
+        }), exp_domain.ExplorationChange({
+            'old_value': ['old_value'],
+            'cmd': 'edit_state_property',
+            'property_name': 'answer_groups',
+            'new_value': [
+                {
+                    'tagged_skill_misconception_id': None,
+                    'rule_specs': [
+                        {
+                            'rule_type': 'IsLessThanOrEqualTo',
+                            'inputs': {
+                                'x': 50
                             }
-                        ],
-                        'training_data': [],
-                        'outcome': {
-                            'param_changes': [],
-                            'dest': 'End',
-                            'dest_if_really_stuck': None,
-                            'missing_prerequisite_skill_id': None,
-                            'feedback': {
-                                'content_id': (
-                                    self.content_id_generator.generate(
-                                        translation_domain.ContentType.FEEDBACK
-                                    )
-                                ),
-                                'html': ''
-                            },
-                            'labelled_as_correct': False,
-                            'refresher_exploration_id': None
                         }
-                    }
-                ],
-                'state_name': 'Introduction'
-            }), exp_domain.ExplorationChange({
-                'old_value': ['old_value'],
-                'cmd': 'edit_state_property',
-                'property_name': 'hints',
-                'new_value': [
-                    {
-                        'hint_content': {
-                            'content_id': self.content_id_generator.generate(
-                            translation_domain.ContentType.FEEDBACK),
-                            'html': '<p>Hint.</p>'
-                        }
-                    }
-                ],
-                'state_name': 'Introduction'
-            }), exp_domain.ExplorationChange({
-                'old_value': {
-                    'content_id': self.content_id_generator.generate(
-                            translation_domain.ContentType.FEEDBACK),
-                    'html': 'Congratulations, you have finished!'
-                },
-                'cmd': 'edit_state_property',
-                'property_name': 'content',
-                'new_value': {
-                    'content_id': self.content_id_generator.generate(
-                            translation_domain.ContentType.FEEDBACK),
-                    'html': '<p>2Congratulations, you have finished!</p>'
-                },
-                'state_name': 'End'
-            })]
-
-            exp_services.update_exploration(
-                self.owner_id, self.EXP_0_ID,
-                self.append_next_content_id_index_change(change_list),
-                'Changed various properties in both states.')
-
-            change_list_2 = [exp_domain.ExplorationChange({
-                'new_state_name': 'End-State',
-                'cmd': 'rename_state',
-                'old_state_name': 'End'
-            }), exp_domain.ExplorationChange({
-                'cmd': 'delete_state',
-                'state_name': 'End-State'
-            }), exp_domain.ExplorationChange({
-                'cmd': 'add_state',
-                'state_name': 'End',
-                'content_id_for_state_content': 'content_0',
-                'content_id_for_default_outcome': 'default_outcome_1'
-            }), exp_domain.ExplorationChange({
-                'cmd': 'delete_state',
-                'state_name': 'End'
-            }), exp_domain.ExplorationChange({
-                'cmd': 'add_state',
-                'state_name': 'End',
-                'content_id_for_state_content': 'content_0',
-                'content_id_for_default_outcome': 'default_outcome_1'
-            }), exp_domain.ExplorationChange({
-                'new_state_name': 'End-State',
-                'cmd': 'rename_state',
-                'old_state_name': 'End'
-            }), exp_domain.ExplorationChange({
-                'new_state_name': 'End',
-                'cmd': 'rename_state',
-                'old_state_name': 'End-State'
-            }), exp_domain.ExplorationChange({
-                'old_value': [{
-                    'tagged_skill_misconception_id': None,
-                    'rule_specs': [{
-                        'rule_type': 'IsLessThanOrEqualTo',
-                        'inputs': {
-                            'x': 50
-                        }
-                    }],
-                    'training_data': [],
-                    'outcome': {
-                        'param_changes': [],
-                        'dest': 'Introduction',
-                        'dest_if_really_stuck': None,
-                        'missing_prerequisite_skill_id': None,
-                        'feedback': {
-                            'content_id': self.content_id_generator.generate(
-                            translation_domain.ContentType.FEEDBACK),
-                            'html': ''
-                        },
-                        'labelled_as_correct': False,
-                        'refresher_exploration_id': None
-                    }
-                }],
-                'cmd': 'edit_state_property',
-                'property_name': 'answer_groups',
-                'new_value': [{
-                    'tagged_skill_misconception_id': None,
-                    'rule_specs': [{
-                        'rule_type': 'IsLessThanOrEqualTo',
-                        'inputs': {
-                            'x': 50
-                        }
-                    }],
+                    ],
                     'training_data': [],
                     'outcome': {
                         'param_changes': [],
@@ -18042,230 +18276,349 @@ class ExplorationChangesMergeabilityUnitTests(
                         'dest_if_really_stuck': None,
                         'missing_prerequisite_skill_id': None,
                         'feedback': {
-                            'content_id': self.content_id_generator.generate(
-                            translation_domain.ContentType.FEEDBACK),
+                            'content_id': (
+                                self.content_id_generator.generate(
+                                    translation_domain.ContentType.FEEDBACK
+                                )
+                            ),
                             'html': ''
                         },
                         'labelled_as_correct': False,
                         'refresher_exploration_id': None
                     }
+                }
+            ],
+            'state_name': 'Introduction'
+        }), exp_domain.ExplorationChange({
+            'old_value': ['old_value'],
+            'cmd': 'edit_state_property',
+            'property_name': 'hints',
+            'new_value': [
+                {
+                    'hint_content': {
+                        'content_id': self.content_id_generator.generate(
+                        translation_domain.ContentType.FEEDBACK),
+                        'html': '<p>Hint.</p>'
+                    }
+                }
+            ],
+            'state_name': 'Introduction'
+        }), exp_domain.ExplorationChange({
+            'old_value': {
+                'content_id': self.content_id_generator.generate(
+                        translation_domain.ContentType.FEEDBACK),
+                'html': 'Congratulations, you have finished!'
+            },
+            'cmd': 'edit_state_property',
+            'property_name': 'content',
+            'new_value': {
+                'content_id': self.content_id_generator.generate(
+                        translation_domain.ContentType.FEEDBACK),
+                'html': '<p>2Congratulations, you have finished!</p>'
+            },
+            'state_name': 'End'
+        })]
+
+        exp_services.update_exploration(
+            self.owner_id, self.EXP_0_ID,
+            self.append_next_content_id_index_change(change_list),
+            'Changed various properties in both states.')
+
+        change_list_2 = [exp_domain.ExplorationChange({
+            'new_state_name': 'End-State',
+            'cmd': 'rename_state',
+            'old_state_name': 'End'
+        }), exp_domain.ExplorationChange({
+            'cmd': 'delete_state',
+            'state_name': 'End-State'
+        }), exp_domain.ExplorationChange({
+            'cmd': 'add_state',
+            'state_name': 'End',
+            'content_id_for_state_content': 'content_0',
+            'content_id_for_default_outcome': 'default_outcome_1'
+        }), exp_domain.ExplorationChange({
+            'cmd': 'delete_state',
+            'state_name': 'End'
+        }), exp_domain.ExplorationChange({
+            'cmd': 'add_state',
+            'state_name': 'End',
+            'content_id_for_state_content': 'content_0',
+            'content_id_for_default_outcome': 'default_outcome_1'
+        }), exp_domain.ExplorationChange({
+            'new_state_name': 'End-State',
+            'cmd': 'rename_state',
+            'old_state_name': 'End'
+        }), exp_domain.ExplorationChange({
+            'new_state_name': 'End',
+            'cmd': 'rename_state',
+            'old_state_name': 'End-State'
+        }), exp_domain.ExplorationChange({
+            'old_value': [{
+                'tagged_skill_misconception_id': None,
+                'rule_specs': [{
+                    'rule_type': 'IsLessThanOrEqualTo',
+                    'inputs': {
+                        'x': 50
+                    }
                 }],
-                'state_name': 'Introduction'
-            }), exp_domain.ExplorationChange({
-                'old_value': {
+                'training_data': [],
+                'outcome': {
                     'param_changes': [],
                     'dest': 'Introduction',
                     'dest_if_really_stuck': None,
                     'missing_prerequisite_skill_id': None,
                     'feedback': {
                         'content_id': self.content_id_generator.generate(
-                            translation_domain.ContentType.FEEDBACK),
+                        translation_domain.ContentType.FEEDBACK),
                         'html': ''
                     },
                     'labelled_as_correct': False,
                     'refresher_exploration_id': None
-                },
-                'cmd': 'edit_state_property',
-                'property_name': 'default_outcome',
-                'new_value': {
+                }
+            }],
+            'cmd': 'edit_state_property',
+            'property_name': 'answer_groups',
+            'new_value': [{
+                'tagged_skill_misconception_id': None,
+                'rule_specs': [{
+                    'rule_type': 'IsLessThanOrEqualTo',
+                    'inputs': {
+                        'x': 50
+                    }
+                }],
+                'training_data': [],
+                'outcome': {
                     'param_changes': [],
                     'dest': 'End',
                     'dest_if_really_stuck': None,
                     'missing_prerequisite_skill_id': None,
                     'feedback': {
                         'content_id': self.content_id_generator.generate(
-                            translation_domain.ContentType.FEEDBACK),
+                        translation_domain.ContentType.FEEDBACK),
                         'html': ''
                     },
                     'labelled_as_correct': False,
                     'refresher_exploration_id': None
-                },
-                'state_name': 'Introduction'
-            }), exp_domain.ExplorationChange({
-                'old_value': {
+                }
+            }],
+            'state_name': 'Introduction'
+        }), exp_domain.ExplorationChange({
+            'old_value': {
+                'param_changes': [],
+                'dest': 'Introduction',
+                'dest_if_really_stuck': None,
+                'missing_prerequisite_skill_id': None,
+                'feedback': {
                     'content_id': self.content_id_generator.generate(
-                            translation_domain.ContentType.FEEDBACK),
+                        translation_domain.ContentType.FEEDBACK),
                     'html': ''
                 },
-                'cmd': 'edit_state_property',
-                'property_name': 'content',
-                'new_value': {
+                'labelled_as_correct': False,
+                'refresher_exploration_id': None
+            },
+            'cmd': 'edit_state_property',
+            'property_name': 'default_outcome',
+            'new_value': {
+                'param_changes': [],
+                'dest': 'End',
+                'dest_if_really_stuck': None,
+                'missing_prerequisite_skill_id': None,
+                'feedback': {
                     'content_id': self.content_id_generator.generate(
-                            translation_domain.ContentType.FEEDBACK),
-                    'html': 'Congratulations, you have finished!'
+                        translation_domain.ContentType.FEEDBACK),
+                    'html': ''
                 },
-                'state_name': 'End'
-            }), exp_domain.ExplorationChange({
-                'old_value': None,
-                'cmd': 'edit_state_property',
-                'property_name': 'widget_id',
-                'new_value': 'EndExploration',
-                'state_name': 'End'
-            }), exp_domain.ExplorationChange({
-                'old_value': test_dict,
-                'cmd': 'edit_state_property',
-                'property_name': 'widget_customization_args',
-                'new_value': {
-                    'recommendedExplorationIds': {
-                        'value': []
-                    }
-                },
-                'state_name': 'End'
-            }), exp_domain.ExplorationChange({
-                'old_value': {
-                    'param_changes': [],
-                    'dest': 'End',
-                    'dest_if_really_stuck': None,
-                    'missing_prerequisite_skill_id': None,
-                    'feedback': {
-                        'content_id': self.content_id_generator.generate(
-                            translation_domain.ContentType.FEEDBACK),
-                        'html': ''
-                    },
-                    'labelled_as_correct': False,
-                    'refresher_exploration_id': None
-                },
-                'cmd': 'edit_state_property',
-                'property_name': 'default_outcome',
-                'new_value': None,
-                'state_name': 'End'
-            })]
-
-            exp_services.update_exploration(
-                self.owner_id, self.EXP_0_ID,
-                self.append_next_content_id_index_change(change_list_2),
-                'Added and deleted states.')
-            change_list_3 = [exp_domain.ExplorationChange({
-                'old_value': {
-                    'html': '',
+                'labelled_as_correct': False,
+                'refresher_exploration_id': None
+            },
+            'state_name': 'Introduction'
+        }), exp_domain.ExplorationChange({
+            'old_value': {
+                'content_id': self.content_id_generator.generate(
+                        translation_domain.ContentType.FEEDBACK),
+                'html': ''
+            },
+            'cmd': 'edit_state_property',
+            'property_name': 'content',
+            'new_value': {
+                'content_id': self.content_id_generator.generate(
+                        translation_domain.ContentType.FEEDBACK),
+                'html': 'Congratulations, you have finished!'
+            },
+            'state_name': 'End'
+        }), exp_domain.ExplorationChange({
+            'old_value': None,
+            'cmd': 'edit_state_property',
+            'property_name': 'widget_id',
+            'new_value': 'EndExploration',
+            'state_name': 'End'
+        }), exp_domain.ExplorationChange({
+            'old_value': test_dict,
+            'cmd': 'edit_state_property',
+            'property_name': 'widget_customization_args',
+            'new_value': {
+                'recommendedExplorationIds': {
+                    'value': []
+                }
+            },
+            'state_name': 'End'
+        }), exp_domain.ExplorationChange({
+            'old_value': {
+                'param_changes': [],
+                'dest': 'End',
+                'dest_if_really_stuck': None,
+                'missing_prerequisite_skill_id': None,
+                'feedback': {
                     'content_id': self.content_id_generator.generate(
-                            translation_domain.ContentType.FEEDBACK)
+                        translation_domain.ContentType.FEEDBACK),
+                    'html': ''
                 },
-                'new_value': {
-                    'html': '<p>Hello Aryaman!</p>',
-                    'content_id': self.content_id_generator.generate(
-                            translation_domain.ContentType.FEEDBACK)
-                },
-                'state_name': 'Introduction',
-                'property_name': 'content',
-                'cmd': 'edit_state_property'
-            })]
-            changes_are_not_mergeable = exp_services.are_changes_mergeable(
-                self.EXP_0_ID, 1, change_list_3)
-            self.assertEqual(changes_are_not_mergeable, False)
+                'labelled_as_correct': False,
+                'refresher_exploration_id': None
+            },
+            'cmd': 'edit_state_property',
+            'property_name': 'default_outcome',
+            'new_value': None,
+            'state_name': 'End'
+        })]
 
-            change_list_3_dict = [change.to_dict() for change in change_list_3]
+        exp_services.update_exploration(
+            self.owner_id, self.EXP_0_ID,
+            self.append_next_content_id_index_change(change_list_2),
+            'Added and deleted states.')
+        change_list_3 = [exp_domain.ExplorationChange({
+            'old_value': {
+                'html': '',
+                'content_id': self.content_id_generator.generate(
+                        translation_domain.ContentType.FEEDBACK)
+            },
+            'new_value': {
+                'html': '<p>Hello Aryaman!</p>',
+                'content_id': self.content_id_generator.generate(
+                        translation_domain.ContentType.FEEDBACK)
+            },
+            'state_name': 'Introduction',
+            'property_name': 'content',
+            'cmd': 'edit_state_property'
+        })]
+        changes_are_not_mergeable = exp_services.are_changes_mergeable(
+            self.EXP_0_ID, 1, change_list_3)
+        self.assertEqual(changes_are_not_mergeable, False)
 
-            expected_email_html_body = (
-                '(Sent from dev-project-id)<br/><br/>'
-                'Hi Admin,<br><br>'
-                'Some draft changes were rejected in exploration %s because '
-                'the changes were conflicting and could not be saved. Please '
-                'see the rejected change list below:<br>'
-                'Discarded change list: %s <br><br>'
-                'Frontend Version: %s<br>'
-                'Backend Version: %s<br><br>'
-                'Thanks!' % (self.EXP_0_ID, change_list_3_dict, 1, 3)
-            )
-            messages = self._get_sent_email_messages(
-                feconf.ADMIN_EMAIL_ADDRESS)
-            self.assertEqual(len(messages), 1)
-            self.assertEqual(messages[0].html, expected_email_html_body)
+        change_list_3_dict = [change.to_dict() for change in change_list_3]
 
+        expected_email_html_body = (
+            '(Sent from dev-project-id)<br/><br/>'
+            'Hi Admin,<br><br>'
+            'Some draft changes were rejected in exploration %s because '
+            'the changes were conflicting and could not be saved. Please '
+            'see the rejected change list below:<br>'
+            'Discarded change list: %s <br><br>'
+            'Frontend Version: %s<br>'
+            'Backend Version: %s<br><br>'
+            'Thanks!' % (self.EXP_0_ID, change_list_3_dict, 1, 3)
+        )
+        messages = self._get_sent_email_messages(
+            feconf.ADMIN_EMAIL_ADDRESS)
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(messages[0].html, expected_email_html_body)
+
+    @test_utils.set_platform_parameters(
+        [(platform_parameter_list.ParamName.SERVER_CAN_SEND_EMAILS, True)]
+    )
     def test_email_is_sent_to_admin_in_case_of_state_renames_changes_conflict(
         self
     ) -> None:
         self.login(self.OWNER_EMAIL)
-        with self.swap(feconf, 'CAN_SEND_EMAILS', True):
-            messages = self._get_sent_email_messages(
-                feconf.ADMIN_EMAIL_ADDRESS)
-            self.assertEqual(len(messages), 0)
-            self.save_new_valid_exploration(
-                self.EXP_0_ID, self.owner_id, end_state_name='End')
+        messages = self._get_sent_email_messages(
+            feconf.ADMIN_EMAIL_ADDRESS)
+        self.assertEqual(len(messages), 0)
+        self.save_new_valid_exploration(
+            self.EXP_0_ID, self.owner_id, end_state_name='End')
 
-            rights_manager.publish_exploration(self.owner, self.EXP_0_ID)
-            change_list = [exp_domain.ExplorationChange({
-                'old_value': {
-                    'html': '',
-                    'content_id': self.content_id_generator.generate(
-                            translation_domain.ContentType.FEEDBACK)
-                },
-                'new_value': {
-                    'html': '<p>End State</p>',
-                    'content_id': self.content_id_generator.generate(
-                            translation_domain.ContentType.FEEDBACK)
-                },
-                'state_name': 'End',
-                'property_name': 'content',
-                'cmd': 'edit_state_property'
-            })]
-            exp_services.update_exploration(
-                self.owner_id, self.EXP_0_ID,
-                self.append_next_content_id_index_change(change_list),
-                'Changed various properties in both states.')
-
-            # State name changed.
-            change_list_2 = [exp_domain.ExplorationChange({
-                'new_state_name': 'End-State',
-                'cmd': 'rename_state',
-                'old_state_name': 'End'
-            })]
-
-            exp_services.update_exploration(
-                self.owner_id, self.EXP_0_ID,
-                self.append_next_content_id_index_change(change_list_2),
-                'Changed various properties in both states.')
-
-            change_list_3 = [exp_domain.ExplorationChange({
-                'old_value': {
-                    'html': 'End State',
-                    'content_id': self.content_id_generator.generate(
-                            translation_domain.ContentType.FEEDBACK)
-                },
-                'new_value': {
-                    'html': '<p>End State Changed</p>',
-                    'content_id': self.content_id_generator.generate(
-                            translation_domain.ContentType.FEEDBACK)
-                },
-                'state_name': 'End',
-                'property_name': 'content',
-                'cmd': 'edit_state_property'
-            })]
-            changes_are_not_mergeable = exp_services.are_changes_mergeable(
-                self.EXP_0_ID, 2, change_list_3)
-            self.assertEqual(changes_are_not_mergeable, False)
-
-            change_list_3_dict = [change.to_dict() for change in change_list_3]
-            expected_email_html_body = (
-                '(Sent from dev-project-id)<br/><br/>'
-                'Hi Admin,<br><br>'
-                'Some draft changes were rejected in exploration %s because '
-                'the changes were conflicting and could not be saved. Please '
-                'see the rejected change list below:<br>'
-                'Discarded change list: %s <br><br>'
-                'Frontend Version: %s<br>'
-                'Backend Version: %s<br><br>'
-                'Thanks!' % (self.EXP_0_ID, change_list_3_dict, 2, 3)
-            )
-            messages = self._get_sent_email_messages(
-                feconf.ADMIN_EMAIL_ADDRESS)
-            self.assertEqual(len(messages), 1)
-            self.assertEqual(expected_email_html_body, messages[0].html)
-
-            # Add a translation after state renames.
-            change_list_4 = [exp_domain.ExplorationChange({
-                'content_html': 'N/A',
-                'translation_html': '<p>State 2 Content Translation.</p>',
-                'state_name': 'End',
-                'language_code': 'de',
+        rights_manager.publish_exploration(self.owner, self.EXP_0_ID)
+        change_list = [exp_domain.ExplorationChange({
+            'old_value': {
+                'html': '',
                 'content_id': self.content_id_generator.generate(
-                            translation_domain.ContentType.FEEDBACK),
-                'cmd': 'add_written_translation',
-                'data_format': 'html'
-            })]
-            changes_are_not_mergeable_2 = exp_services.are_changes_mergeable(
-                self.EXP_0_ID, 2, change_list_4)
-            self.assertEqual(changes_are_not_mergeable_2, False)
+                        translation_domain.ContentType.FEEDBACK)
+            },
+            'new_value': {
+                'html': '<p>End State</p>',
+                'content_id': self.content_id_generator.generate(
+                        translation_domain.ContentType.FEEDBACK)
+            },
+            'state_name': 'End',
+            'property_name': 'content',
+            'cmd': 'edit_state_property'
+        })]
+        exp_services.update_exploration(
+            self.owner_id, self.EXP_0_ID,
+            self.append_next_content_id_index_change(change_list),
+            'Changed various properties in both states.')
+
+        # State name changed.
+        change_list_2 = [exp_domain.ExplorationChange({
+            'new_state_name': 'End-State',
+            'cmd': 'rename_state',
+            'old_state_name': 'End'
+        })]
+
+        exp_services.update_exploration(
+            self.owner_id, self.EXP_0_ID,
+            self.append_next_content_id_index_change(change_list_2),
+            'Changed various properties in both states.')
+
+        change_list_3 = [exp_domain.ExplorationChange({
+            'old_value': {
+                'html': 'End State',
+                'content_id': self.content_id_generator.generate(
+                        translation_domain.ContentType.FEEDBACK)
+            },
+            'new_value': {
+                'html': '<p>End State Changed</p>',
+                'content_id': self.content_id_generator.generate(
+                        translation_domain.ContentType.FEEDBACK)
+            },
+            'state_name': 'End',
+            'property_name': 'content',
+            'cmd': 'edit_state_property'
+        })]
+        changes_are_not_mergeable = exp_services.are_changes_mergeable(
+            self.EXP_0_ID, 2, change_list_3)
+        self.assertEqual(changes_are_not_mergeable, False)
+
+        change_list_3_dict = [change.to_dict() for change in change_list_3]
+        expected_email_html_body = (
+            '(Sent from dev-project-id)<br/><br/>'
+            'Hi Admin,<br><br>'
+            'Some draft changes were rejected in exploration %s because '
+            'the changes were conflicting and could not be saved. Please '
+            'see the rejected change list below:<br>'
+            'Discarded change list: %s <br><br>'
+            'Frontend Version: %s<br>'
+            'Backend Version: %s<br><br>'
+            'Thanks!' % (self.EXP_0_ID, change_list_3_dict, 2, 3)
+        )
+        messages = self._get_sent_email_messages(
+            feconf.ADMIN_EMAIL_ADDRESS)
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(expected_email_html_body, messages[0].html)
+
+        # Add a translation after state renames.
+        change_list_4 = [exp_domain.ExplorationChange({
+            'content_html': 'N/A',
+            'translation_html': '<p>State 2 Content Translation.</p>',
+            'state_name': 'End',
+            'language_code': 'de',
+            'content_id': self.content_id_generator.generate(
+                        translation_domain.ContentType.FEEDBACK),
+            'cmd': 'add_written_translation',
+            'data_format': 'html'
+        })]
+        changes_are_not_mergeable_2 = exp_services.are_changes_mergeable(
+            self.EXP_0_ID, 2, change_list_4)
+        self.assertEqual(changes_are_not_mergeable_2, False)
 
 
 class ExplorationMetadataDomainUnitTests(test_utils.GenericTestBase):
@@ -18331,7 +18684,7 @@ class ExplorationMetadataDomainUnitTests(test_utils.GenericTestBase):
             exploration.author_notes, exploration.states_schema_version,
             exploration.init_state_name, exploration.param_specs,
             exploration.param_changes, exploration.auto_tts_enabled,
-            exploration.correctness_feedback_enabled, exploration.edits_allowed
+            exploration.edits_allowed
         ).to_dict()
         expected_metadata_dict = {
             'title': exploration.title,
@@ -18362,8 +18715,6 @@ class ExplorationMetadataDomainUnitTests(test_utils.GenericTestBase):
                 ).to_dict()
             ],
             'auto_tts_enabled': exploration.auto_tts_enabled,
-            'correctness_feedback_enabled': (
-                exploration.correctness_feedback_enabled),
             'edits_allowed': exploration.edits_allowed
         }
 
@@ -18377,7 +18728,7 @@ class ExplorationMetadataDomainUnitTests(test_utils.GenericTestBase):
                 'title', 'category', 'objective', 'language_code',
                 'blurb', 'author_notes', 'states_schema_version',
                 'init_state_name', 'param_specs', 'param_changes',
-                'auto_tts_enabled', 'correctness_feedback_enabled',
+                'auto_tts_enabled',
                 'edits_allowed'
             ]
         )
@@ -18399,8 +18750,7 @@ class ExplorationMetadataDomainUnitTests(test_utils.GenericTestBase):
                 'title', 'category', 'objective', 'language_code', 'tags',
                 'blurb', 'author_notes', 'states_schema_version',
                 'init_state_name', 'param_specs', 'param_changes',
-                'auto_tts_enabled', 'correctness_feedback_enabled',
-                'edits_allowed', 'new_property'
+                'auto_tts_enabled', 'edits_allowed', 'new_property'
             ]
         )
         error_message = (
@@ -18470,3 +18820,107 @@ class ExplorationVersionHistoryUnitTests(test_utils.GenericTestBase):
         ).to_dict()
 
         self.assertEqual(actual_dict, expected_dict)
+
+
+class OldVersionExploration(translation_domain.BaseTranslatableObject):
+    """Initailize old version Exploration object
+
+    Args:
+        exploration_id: str. The id of the exploration.
+        exploration_dict: dict. The dict representation of the old version
+            exploration.
+    """
+
+    def __init__(
+            self,
+            exploration_id: str,
+            exploration_dict: Dict[str, Any]):
+        self.id = exploration_id
+        self.author_notes = exploration_dict.get('author_notes', '')
+        self.auto_tts_enabled = exploration_dict.get(
+            'auto_tts_enabled', True)
+        self.blurb = exploration_dict.get('blurb', '')
+        self.category = exploration_dict.get('category', '')
+        self.edits_allowed = exploration_dict.get(
+            'edits_allowed', True)
+        self.init_state_name = exploration_dict.get(
+            'init_state_name', '')
+        self.language_code = exploration_dict.get(
+            'language_code', '')
+        self.objective = exploration_dict.get('objective', '')
+        self.param_changes = exploration_dict.get(
+            'param_changes', [])
+        self.param_specs = exploration_dict.get('param_specs', {})
+        self.version = exploration_dict.get('schema_version', 0)
+        self.states = exploration_dict.get('states', {})
+        self.states_schema_version = exploration_dict.get(
+            'states_schema_version', 0)
+        self.tags = exploration_dict.get('tags', [])
+        self.title = exploration_dict.get('title', '')
+        self.next_content_id_index = exploration_dict.get(
+            'next_content_id_index', 0)
+
+    # Here we use type Any because old versioned Exploration
+    # object have any field.
+    def to_dict(self) -> exp_domain.ExplorationDict:
+
+        """Returns a copy of the exploration as a dictionary."""
+
+        exploration_dict: exp_domain.ExplorationDict = ({
+            'id': self.id,
+            'title': self.title,
+            'category': self.category,
+            'author_notes': self.author_notes,
+            'blurb': self.blurb,
+            'states_schema_version': self.states_schema_version,
+            'language_code': self.language_code,
+            'objective': self.objective,
+            'param_changes': self.param_changes,
+            'param_specs': self.param_specs,
+            'tags': self.tags,
+            'auto_tts_enabled': self.auto_tts_enabled,
+            'states': {
+                state_name: (
+                    state.to_dict()
+                    if hasattr(state, 'to_dict') else state)
+                for state_name, state in self.states.items()
+            },
+            'version': self.version,
+            'edits_allowed': self.edits_allowed,
+            'init_state_name': self.init_state_name,
+            'next_content_id_index': self.next_content_id_index,
+
+        })
+        exploration_dict_deepcopy = copy.deepcopy(exploration_dict)
+        return exploration_dict_deepcopy
+
+    def serialize(self) -> str:
+        """Returns the object serialized as a JSON string.
+
+        Returns:
+            str. JSON-encoded str encoding all of the information
+            composing the object.
+        """
+        # Here we use MyPy ignore because to_dict() method returns a general
+        # dictionary representation of domain object (OldVersionExploration)
+        # that assign with SerializableExplorationDict to put in cache for
+        # testing purpose.
+        exploration_dict: exp_domain.SerializableExplorationDict = self.to_dict() # type: ignore[assignment]
+        exploration_dict['version'] = self.version
+        return json.dumps(exploration_dict)
+
+
+def create_old_schema_exploration(
+        exploration_id: str,
+        yaml_content: str) -> OldVersionExploration:
+    """Creates an old version exploration object from the yaml content.
+
+    Args:
+        exploration_id: str. The id of the exploration.
+        yaml_content: str. The yaml content of the old version exploration.
+
+    Returns:
+        OldVersionExploration. The exploration object of old version.
+    """
+    exploration_dict = yaml.safe_load(yaml_content)
+    return OldVersionExploration(exploration_id, exploration_dict)

@@ -27,9 +27,9 @@ from typing import List, Optional
 
 
 INSTALLATION_TOOL_VERSIONS = {
-    'pip': '22.1.1',
-    'pip-tools': '6.6.2',
-    'setuptools': '58.5.3',
+    'pip': '24.3.1',
+    'pip-tools': '7.4.1',
+    'setuptools': '75.6.0',
 }
 REQUIREMENTS_DEV_FILE_PATH = 'requirements_dev.in'
 COMPILED_REQUIREMENTS_DEV_FILE_PATH = 'requirements_dev.txt'
@@ -77,17 +77,32 @@ def install_installation_tools() -> None:
         # We run pip as a subprocess because importing from the pip
         # module is not supported:
         # https://pip.pypa.io/en/stable/user_guide/#using-pip-from-your-program.
-        subprocess.run(
+        proc_pip_install = subprocess.Popen(
             [sys.executable, '-m', 'pip', 'install', f'{package}=={version}'],
-            check=True,
-            encoding='utf-8',
-        )
+            stdout=subprocess.PIPE)
+
+        # We suppress the "Requirement already satisfied" warning since it
+        # clutters the output.
+        proc_filter_output = subprocess.Popen(
+            ['grep', '-v', 'Requirement already satisfied'],
+            stdin=proc_pip_install.stdout,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+        if proc_pip_install.stdout is not None:
+            proc_pip_install.stdout.close()
+
+        out, err = proc_filter_output.communicate()
+        if out:
+            print(out.splitlines())
+        if err:
+            print('ERRORS: {0}'.format(str(err)))
 
 
 def install_dev_dependencies() -> None:
     """Install dev dependencies from COMPILED_REQUIREMENTS_DEV_FILE_PATH."""
     subprocess.run(
-        ['pip-sync', COMPILED_REQUIREMENTS_DEV_FILE_PATH],
+        ['pip-sync', COMPILED_REQUIREMENTS_DEV_FILE_PATH, '--pip-args',
+        '--require-hashes --no-deps'],
         check=True,
         encoding='utf-8',
     )
@@ -118,7 +133,8 @@ def compile_pip_requirements(
         old_compiled = f.read()
     subprocess.run(
         [
-            'pip-compile', '--no-emit-index-url', requirements_path,
+            'pip-compile', '--no-emit-index-url', '--quiet',
+            '--strip-extras', '--generate-hashes', requirements_path,
             '--output-file', compiled_path,
         ],
         check=True,
